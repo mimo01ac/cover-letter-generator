@@ -92,8 +92,9 @@ export async function startVapiCall(
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to start call: ${error}`);
+    const errorData = await response.json().catch(() => null);
+    const errorMessage = errorData?.error || `HTTP ${response.status}`;
+    throw new Error(`Failed to start call: ${errorMessage}`);
   }
 
   const data = await response.json();

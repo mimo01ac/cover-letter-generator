@@ -38,6 +38,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = req.body as StartCallRequest;
   const { phoneNumber, assistantPrompt, profileName } = body;
 
+  if (!process.env.VAPI_API_KEY) {
+    console.error('VAPI_API_KEY not configured');
+    return res.status(500).json({ error: 'Server configuration error: VAPI_API_KEY not set' });
+  }
+
+  if (!process.env.VAPI_PHONE_NUMBER_ID) {
+    console.error('VAPI_PHONE_NUMBER_ID not configured');
+    return res.status(500).json({ error: 'Server configuration error: VAPI_PHONE_NUMBER_ID not set' });
+  }
+
   try {
     const response = await fetch('https://api.vapi.ai/call/phone', {
       method: 'POST',
@@ -88,6 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ callId: data.id });
   } catch (error) {
     console.error('Vapi API error:', error);
-    return res.status(500).json({ error: 'Failed to start call' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ error: `Failed to start call: ${errorMessage}` });
   }
 }
