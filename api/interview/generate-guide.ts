@@ -50,6 +50,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .map((doc) => `### ${doc.name} (${doc.type})\n${doc.content}`)
     .join('\n\n');
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('ANTHROPIC_API_KEY not configured');
+    return res.status(500).json({ error: 'Server configuration error: ANTHROPIC_API_KEY not set' });
+  }
+
   const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
   });
@@ -109,6 +114,7 @@ Respond ONLY with valid JSON in this format:
     return res.status(200).json(guide);
   } catch (error) {
     console.error('Claude API error:', error);
-    return res.status(500).json({ error: 'Failed to generate interview guide' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ error: `Failed to generate interview guide: ${errorMessage}` });
   }
 }

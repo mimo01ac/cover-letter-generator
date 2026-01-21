@@ -33,7 +33,8 @@ export async function generateInterviewGuide(
   });
 
   if (!response.ok) {
-    throw new Error('Failed to generate interview guide');
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(errorData.error || 'Failed to generate interview guide');
   }
 
   return response.json();

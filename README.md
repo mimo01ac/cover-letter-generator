@@ -1,33 +1,75 @@
 # Cover Letter Generator
 
-A React web application for creating customized cover letters using AI. Upload your CV/experience documents, paste job descriptions, and get AI-generated cover letters you can iteratively refine.
+A React web application for creating personalized cover letters using AI. Features profile management, CV upload, AI-powered cover letter generation with feedback analysis, and an AI phone interview feature.
 
 ## Features
 
 - **Profile Management**: Store your personal information and upload documents (CV, experience notes)
-- **AI Cover Letter Generation**: Uses Anthropic's Claude API to generate personalized cover letters
+- **AI Cover Letter Generation**: Uses Anthropic's Claude API with streaming responses
+- **Feedback Analysis**: Automatic match score, improvement suggestions, and keyword analysis
 - **Iterative Refinement**: Chat interface to refine the generated letter with follow-up requests
-- **Local Storage**: All data stored locally using IndexedDB (no server required)
-- **PIN Protection**: Optionally protect your data and API key with a PIN
+- **Job URL Scraping**: Automatically extract job descriptions from URLs (supports jobindex.dk and other public job postings)
+- **AI Phone Interview**: Vapi.ai-powered phone interviews that analyze your CV and generate personalized insights
+- **Multi-language Support**: Detects Danish/English and generates appropriate cover letters
+- **Secure Authentication**: Email/password authentication via Supabase Auth
+- **Cloud Storage**: All data securely stored in Supabase PostgreSQL with Row Level Security
 
 ## Tech Stack
 
-- React 19 + Vite + TypeScript
-- Tailwind CSS v4
-- Dexie.js (IndexedDB wrapper)
-- Zustand (state management)
-- React Router v7
+- **Frontend**: React 19, TypeScript, Vite 7
+- **Styling**: Tailwind CSS 4
+- **State Management**: Zustand
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth (email/password)
+- **Backend**: Vercel Serverless Functions
+- **AI**: Anthropic Claude API (server-side)
+- **Voice Interview**: Vapi.ai (server-side)
+
+## Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   React App     │────▶│  Vercel API     │────▶│   Anthropic     │
+│   (Frontend)    │     │  (Serverless)   │     │   Claude API    │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        │                       │
+        │                       │
+        ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐
+│  Supabase Auth  │     │   Vapi.ai       │
+│  (JWT tokens)   │     │   (Phone API)   │
+└─────────────────┘     └─────────────────┘
+        │
+        ▼
+┌─────────────────┐
+│   Supabase      │
+│   PostgreSQL    │
+│   (with RLS)    │
+└─────────────────┘
+```
 
 ## Installation
 
-**Important**: If you're experiencing npm install errors on Windows, try copying this folder to a path without spaces or special characters (e.g., `C:\projects\cover-letter-generator`).
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Supabase account
+- Vercel account (for deployment)
+- Anthropic API key
+- Vapi.ai API key (optional, for phone interviews)
+
+### Local Development
 
 ```bash
-# Navigate to the project directory
+# Clone the repository
+git clone https://github.com/mimo01ac/cover-letter-generator.git
 cd cover-letter-generator
 
 # Install dependencies
 npm install
+
+# Create .env.local file (see Environment Variables section)
 
 # Start development server
 npm run dev
@@ -35,51 +77,113 @@ npm run dev
 
 The app will be available at `http://localhost:5173`
 
+## Environment Variables
+
+### Frontend (.env.local)
+
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+```
+
+### Vercel (Server-side)
+
+Set these in Vercel dashboard under Environment Variables:
+
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=eyJ...
+ANTHROPIC_API_KEY=sk-ant-...
+VAPI_API_KEY=...              (optional)
+VAPI_PHONE_NUMBER_ID=...      (optional)
+```
+
+## Deployment
+
+### 1. Supabase Setup
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to SQL Editor and run the schema from `supabase/schema.sql`
+3. Copy your project URL and anon key from Settings > API
+
+### 2. Vercel Setup
+
+1. Import your GitHub repository at [vercel.com](https://vercel.com)
+2. Add environment variables (see above)
+3. Deploy
+
+### 3. Configure Authentication
+
+1. In Supabase dashboard, go to Authentication > Providers
+2. Ensure Email provider is enabled
+3. Optionally disable email confirmation for testing
+
 ## Usage
 
-1. **Set up your API key**: Go to Settings and enter your Anthropic API key (get one from [console.anthropic.com](https://console.anthropic.com/settings/keys))
+1. **Create an account**: Sign up with email and password
 
-2. **Create your profile**: Go to Profile and fill in your information
+2. **Set up your profile**: Go to Profile and fill in your information
 
-3. **Upload documents**: Upload your CV and any other relevant experience documents
+3. **Upload documents**: Upload your CV and any relevant experience documents
 
 4. **Generate a cover letter**:
    - Go to the Generate page
-   - Enter the job title and company name
-   - Paste the job description
+   - Enter a job URL or paste the job description
+   - Optionally add custom notes for the AI
    - Click "Generate Cover Letter"
 
-5. **Refine your letter**: Use the chat interface to make adjustments:
-   - "Make it more formal"
-   - "Emphasize my leadership experience"
-   - "Make it shorter"
+5. **Review feedback**: See your match score and improvement suggestions
+
+6. **Refine your letter**: Use the chat interface to make adjustments
+
+7. **AI Interview** (optional): Start an AI phone interview for deeper insights
 
 ## Project Structure
 
 ```
-src/
-├── components/
-│   ├── Layout/           # App shell, navigation, PIN lock
-│   ├── Profile/          # Profile form, document upload
-│   ├── CoverLetter/      # Generation form, chat refinement, history
-│   └── Settings/         # API key config, PIN setup
-├── services/
-│   ├── claude.ts         # Anthropic API integration
-│   ├── db.ts             # Dexie/IndexedDB operations
-│   └── documentParser.ts # Parse uploaded files
-├── stores/
-│   └── useStore.ts       # Zustand state management
-├── types/
-│   └── index.ts          # TypeScript interfaces
-└── utils/
-    └── crypto.ts         # PIN hashing and encryption
+├── api/                           # Vercel serverless functions
+│   ├── cover-letter/
+│   │   ├── generate.ts            # Generate cover letter (streaming)
+│   │   ├── refine.ts              # Refine via chat (streaming)
+│   │   └── analyze.ts             # Feedback analysis
+│   └── interview/
+│       ├── generate-guide.ts      # Generate interview guide
+│       ├── start-call.ts          # Start Vapi phone call
+│       ├── call-status.ts         # Poll call status
+│       └── process-transcript.ts  # Process interview transcript
+├── supabase/
+│   └── schema.sql                 # Database schema with RLS policies
+├── src/
+│   ├── components/
+│   │   ├── Auth/                  # Login/signup page
+│   │   ├── Layout/                # App shell, navigation
+│   │   ├── Profile/               # Profile form, document upload, interview
+│   │   ├── CoverLetter/           # Generation, refinement, history, feedback
+│   │   └── Settings/              # Account settings
+│   ├── contexts/
+│   │   └── AuthContext.tsx        # Supabase auth context
+│   ├── lib/
+│   │   ├── supabase.ts            # Supabase client
+│   │   └── database.types.ts      # TypeScript types for DB
+│   ├── services/
+│   │   ├── claude.ts              # Claude API client
+│   │   ├── db.ts                  # Supabase database operations
+│   │   ├── feedbackAnalyzer.ts    # Analysis client
+│   │   ├── jobScraper.ts          # URL scraping
+│   │   └── vapiInterview.ts       # Vapi client
+│   ├── stores/
+│   │   └── useStore.ts            # Zustand state (UI state)
+│   └── types/
+│       └── index.ts               # TypeScript interfaces
+└── vercel.json                    # Vercel configuration
 ```
 
-## Security Notes
+## Security
 
-- Your API key is stored locally and can be encrypted with a PIN
-- All data stays in your browser's IndexedDB
-- No data is sent to any server except Anthropic's API for generation
+- **API Keys**: All API keys (Anthropic, Vapi) are stored server-side only
+- **Authentication**: JWT-based sessions via Supabase Auth
+- **Data Isolation**: Row Level Security ensures users only access their own data
+- **No Indexing**: Site is configured with noindex/nofollow meta tags
 
 ## Available Scripts
 
@@ -89,21 +193,32 @@ src/
 
 ## Troubleshooting
 
-### npm install fails on Windows
+### Authentication Issues
 
-This can happen due to:
-1. OneDrive/cloud sync interference
-2. Paths with spaces or special characters
-3. Antivirus scanning
+If you can't sign in:
+1. Check that Supabase URL and anon key are correct in `.env.local`
+2. Ensure the Email provider is enabled in Supabase Auth settings
+3. Check browser console for specific error messages
 
-Solutions:
-1. Copy the project to a simple path like `C:\projects\cover-letter`
-2. Pause OneDrive sync temporarily
-3. Run as administrator
-4. Try `npm install --legacy-peer-deps`
+### Cover Letter Generation Fails
 
-### PDF parsing not working
+1. Verify `ANTHROPIC_API_KEY` is set correctly in Vercel
+2. Check Vercel function logs for errors
+3. Ensure you have credits on your Anthropic account
 
-If PDF text extraction fails, you can:
+### Interview Feature Not Working
+
+1. Verify `VAPI_API_KEY` and `VAPI_PHONE_NUMBER_ID` are set in Vercel
+2. International calls require a paid Vapi phone number
+3. Check Vercel function logs for specific errors
+
+### PDF Parsing Issues
+
+If PDF text extraction fails:
 1. Copy and paste the text directly from your PDF
 2. Save your CV as a `.txt` file first
+3. Use the "Paste Text" option instead of file upload
+
+## License
+
+Private - All rights reserved
