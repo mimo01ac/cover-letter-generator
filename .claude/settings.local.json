@@ -9,7 +9,13 @@
       "Bash(timeout:*)",
       "Bash(npm install:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Cover Letter Generator with Supabase + Vercel\n\nFeatures:\n- AI-powered cover letter generation with Claude\n- Email/password authentication via Supabase\n- Profile and document management\n- Cover letter feedback analysis\n- AI phone interview feature with Vapi\n- Server-side API routes via Vercel\n\nTech stack: React, TypeScript, Tailwind CSS, Supabase, Vercel\nEOF\n\\)\")",
+      "Bash(gh --version:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
