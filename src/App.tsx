@@ -5,12 +5,14 @@ import { Generator } from './components/CoverLetter';
 import { HistoryPage } from './components/CoverLetter';
 import { ProfilePage } from './components/Profile';
 import { SettingsPage } from './components/Settings';
+import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<AppLayout />}>
             <Route path="/" element={<Generator />} />
             <Route path="/profile" element={<ProfilePage />} />

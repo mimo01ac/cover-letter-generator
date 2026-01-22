@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 
+type AuthMode = 'signIn' | 'signUp' | 'forgotPassword';
+
 export function LoginPage() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<AuthMode>('signIn');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -16,7 +18,24 @@ export function LoginPage() {
     setError('');
     setMessage('');
 
-    if (isSignUp && password !== confirmPassword) {
+    if (mode === 'forgotPassword') {
+      if (!email.trim()) {
+        setError('Please enter your email address');
+        return;
+      }
+      setLoading(true);
+      try {
+        await resetPassword(email);
+        setMessage('Password reset email sent! Check your inbox.');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to send reset email');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (mode === 'signUp' && password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
@@ -29,10 +48,10 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (mode === 'signUp') {
         await signUp(email, password);
         setMessage('Account created! You can now sign in.');
-        setIsSignUp(false);
+        setMode('signIn');
         setPassword('');
         setConfirmPassword('');
       } else {
@@ -43,6 +62,14 @@ export function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const switchMode = (newMode: AuthMode) => {
+    setMode(newMode);
+    setError('');
+    setMessage('');
+    setPassword('');
+    setConfirmPassword('');
   };
 
   return (
@@ -58,7 +85,9 @@ export function LoginPage() {
             Cover Letter Generator
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            {isSignUp ? 'Create an account to get started' : 'Sign in to continue'}
+            {mode === 'signUp' && 'Create an account to get started'}
+            {mode === 'signIn' && 'Sign in to continue'}
+            {mode === 'forgotPassword' && 'Enter your email to reset password'}
           </p>
         </div>
 
@@ -77,22 +106,24 @@ export function LoginPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              placeholder="Min. 6 characters"
-              required
-              minLength={6}
-            />
-          </div>
+          {mode !== 'forgotPassword' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="Min. 6 characters"
+                required
+                minLength={6}
+              />
+            </div>
+          )}
 
-          {isSignUp && (
+          {mode === 'signUp' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Confirm Password
@@ -106,6 +137,18 @@ export function LoginPage() {
                 required
                 minLength={6}
               />
+            </div>
+          )}
+
+          {mode === 'signIn' && (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => switchMode('forgotPassword')}
+                className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+              >
+                Forgot password?
+              </button>
             </div>
           )}
 
@@ -132,27 +175,37 @@ export function LoginPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                {isSignUp ? 'Creating account...' : 'Signing in...'}
+                {mode === 'signUp' && 'Creating account...'}
+                {mode === 'signIn' && 'Signing in...'}
+                {mode === 'forgotPassword' && 'Sending reset email...'}
               </>
             ) : (
-              isSignUp ? 'Create Account' : 'Sign In'
+              <>
+                {mode === 'signUp' && 'Create Account'}
+                {mode === 'signIn' && 'Sign In'}
+                {mode === 'forgotPassword' && 'Send Reset Email'}
+              </>
             )}
           </button>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError('');
-                setMessage('');
-                setPassword('');
-                setConfirmPassword('');
-              }}
-              className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
-            >
-              {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
-            </button>
+          <div className="text-center space-y-2">
+            {mode === 'forgotPassword' ? (
+              <button
+                type="button"
+                onClick={() => switchMode('signIn')}
+                className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+              >
+                Back to sign in
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => switchMode(mode === 'signIn' ? 'signUp' : 'signIn')}
+                className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+              >
+                {mode === 'signUp' ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+              </button>
+            )}
           </div>
         </form>
       </div>
