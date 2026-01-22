@@ -26,6 +26,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Check required environment variables (support both VITE_ prefixed and non-prefixed)
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!anthropicKey || !supabaseUrl || !supabaseKey) {
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   // Verify auth token
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
@@ -35,8 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const token = authHeader.slice(7);
 
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       global: {
         headers: { Authorization: `Bearer ${token}` },
@@ -86,7 +95,7 @@ ${coverLetter}
 ${jobDescription}`;
 
   const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
+    apiKey: anthropicKey,
   });
 
   try {

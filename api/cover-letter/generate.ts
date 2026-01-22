@@ -89,13 +89,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Check required environment variables
-  if (!process.env.ANTHROPIC_API_KEY) {
+  // Check required environment variables (support both VITE_ prefixed and non-prefixed)
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!anthropicKey) {
     console.error('Missing ANTHROPIC_API_KEY environment variable');
     return res.status(500).json({ error: 'Server configuration error: Missing API key' });
   }
 
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  if (!supabaseUrl || !supabaseKey) {
     console.error('Missing Supabase environment variables');
     return res.status(500).json({ error: 'Server configuration error: Missing database config' });
   }
@@ -110,8 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY,
+      supabaseUrl,
+      supabaseKey,
       {
         global: {
           headers: { Authorization: `Bearer ${token}` },
@@ -128,7 +132,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { profile, documents, jobTitle, companyName, jobDescription, language = 'da', customNotes } = body;
 
     const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+      apiKey: anthropicKey,
     });
 
     const system = buildSystemPrompt(profile, documents, language);
