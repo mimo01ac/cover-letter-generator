@@ -206,7 +206,7 @@ export function InterviewModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
             AI Career Interview
           </h2>
           <button
@@ -323,7 +323,7 @@ export function InterviewModal({
                 </svg>
               </div>
             </div>
-            <p className="text-lg font-medium text-gray-900 dark:text-white mt-4">
+            <p className="text-lg font-medium text-gray-800 dark:text-white mt-4">
               Interview in Progress
             </p>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -348,7 +348,7 @@ export function InterviewModal({
             <svg className="w-16 h-16 mx-auto text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-lg font-medium text-gray-900 dark:text-white">
+            <p className="text-lg font-medium text-gray-800 dark:text-white">
               Interview Complete!
             </p>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -369,7 +369,7 @@ export function InterviewModal({
             <svg className="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-lg font-medium text-gray-900 dark:text-white">
+            <p className="text-lg font-medium text-gray-800 dark:text-white">
               Something went wrong
             </p>
             <p className="text-red-500 mt-2">{error}</p>

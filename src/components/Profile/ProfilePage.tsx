@@ -111,7 +111,7 @@ export function ProfilePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
           Profile Management
         </h1>
         {profiles.length > 1 && (
@@ -134,7 +134,7 @@ export function ProfilePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
             {currentProfile ? 'Edit Profile' : 'Create Profile'}
           </h2>
           <ProfileForm profile={currentProfile} onSave={handleProfileSaved} />
@@ -158,7 +158,7 @@ export function ProfilePage() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">
                       AI Career Interview
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
@@ -199,7 +199,7 @@ export function ProfilePage() {
               </div>
 
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
                   Your Documents ({documents.length})
                 </h3>
                 <DocumentList

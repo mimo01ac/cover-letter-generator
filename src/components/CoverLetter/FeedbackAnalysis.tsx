@@ -59,23 +59,23 @@ export function FeedbackAnalysis({ feedback, isLoading, language }: FeedbackAnal
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
         {t.title}
       </h2>
 
       {/* Match Score */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
             {t.matchScore}
           </span>
-          <span className={`text-2xl font-bold ${getScoreColor(feedback.matchScore)}`}>
+          <span className={`text-xl font-semibold ${getScoreColor(feedback.matchScore)}`}>
             {feedback.matchScore}%
           </span>
         </div>
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
           <div
-            className={`h-3 rounded-full transition-all duration-500 ${getScoreBarColor(feedback.matchScore)}`}
+            className={`h-1.5 rounded-full transition-all duration-500 ${getScoreBarColor(feedback.matchScore)}`}
             style={{ width: `${feedback.matchScore}%` }}
           />
         </div>
@@ -131,14 +131,14 @@ export function FeedbackAnalysis({ feedback, isLoading, language }: FeedbackAnal
       {/* Missing Keywords */}
       {feedback.missingKeywords.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
             {t.missingKeywords}
           </h3>
           <div className="flex flex-wrap gap-2">
             {feedback.missingKeywords.map((keyword, index) => (
               <span
                 key={index}
-                className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-sm rounded-md"
+                className="px-3 py-1 border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm rounded-md bg-transparent hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 {keyword}
               </span>

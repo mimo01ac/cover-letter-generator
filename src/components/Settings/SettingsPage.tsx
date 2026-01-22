@@ -11,20 +11,20 @@ export function SettingsPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
         Settings
       </h1>
 
       {/* Account Section */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
           Account
         </h2>
 
         <div className="space-y-2">
           <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
             <span className="text-gray-600 dark:text-gray-400">Email</span>
-            <span className="text-gray-900 dark:text-white font-medium">
+            <span className="text-gray-800 dark:text-white font-medium">
               {user?.email}
             </span>
           </div>
@@ -40,7 +40,7 @@ export function SettingsPage() {
 
       {/* Data Management */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
           Data Storage
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400">

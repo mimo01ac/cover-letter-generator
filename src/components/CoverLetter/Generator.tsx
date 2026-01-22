@@ -221,7 +221,7 @@ export function Generator() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
           Generate Cover Letter
         </h1>
         {profiles.length > 1 && (
@@ -245,7 +245,7 @@ export function Generator() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Input Section */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
             Job Details
           </h2>
 
@@ -409,10 +409,10 @@ export function Generator() {
           </div>
         </div>
 
-        {/* Output Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 space-y-4">
+        {/* Output Section - Paper Document Style */}
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               Generated Cover Letter
             </h2>
             {generatedLetter && (
@@ -450,13 +450,11 @@ export function Generator() {
           </div>
 
           {generatedLetter ? (
-            <div className="prose dark:prose-invert max-w-none">
-              <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-                {generatedLetter}
-              </pre>
+            <div className="paper-document rounded-lg whitespace-pre-wrap text-base leading-relaxed">
+              {generatedLetter}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-12 flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">
               <div className="text-center">
                 <svg
                   className="w-12 h-12 mx-auto mb-2"

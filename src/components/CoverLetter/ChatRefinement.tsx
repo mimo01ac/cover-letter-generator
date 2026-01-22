@@ -139,7 +139,7 @@ export function ChatRefinement({ jobDescription, jobTitle, companyName, onLetter
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
         Refine Your Letter
       </h3>
 
@@ -155,7 +155,7 @@ export function ChatRefinement({ jobDescription, jobTitle, companyName, onLetter
                 className={`max-w-[80%] px-4 py-2 rounded-lg ${
                   msg.role === 'user'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white'
                 }`}
               >
                 {msg.content}
