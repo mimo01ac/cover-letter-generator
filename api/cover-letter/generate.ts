@@ -22,64 +22,114 @@ interface GenerationRequest {
   customNotes?: string;
 }
 
-function buildSystemPrompt(
-  profile: GenerationRequest['profile'],
-  documents: GenerationRequest['documents'],
-  language: 'en' | 'da'
-): string {
-  const cvContent = documents
-    .map((doc) => `### ${doc.name} (${doc.type})\n${doc.content}`)
-    .join('\n\n');
+const SYSTEM_PROMPT = `You are an expert Executive Career Coach and Professional Copywriter. Your goal is to write a high-impact, authentic cover letter that connects a candidate's verified experience to a specific job opening.
 
-  const languageInstruction =
-    language === 'da'
-      ? 'Write the cover letter in Danish (Dansk).'
-      : 'Write the cover letter in English.';
+### DATA SOURCE HIERARCHY (CRITICAL)
+You have access to multiple data sources in the <candidate_profile>. Use them in this priority order:
+1.  **<interview_transcripts>:** This is the "Gold Source." It contains the candidate's authentic voice, specific anecdotes, and deep context. ALWAYS look here first for "STAR" examples (Situation, Task, Action, Result) to include.
+2.  **<professional_summary>:** Use this to understand their core value proposition and branding.
+3.  **<resume> & <supporting_experience>:** Use these for dates, hard skills, and factual verification.
 
-  return `You are an expert cover letter writer. Your task is to create compelling, personalized cover letters that highlight the candidate's relevant experience and skills.
+### CORE DIRECTIVES (STRICT ADHERENCE REQUIRED)
 
-## Candidate Profile
-Name: ${profile.name}
-Email: ${profile.email}
-Phone: ${profile.phone}
-Location: ${profile.location}
-Summary: ${profile.summary || 'Not provided'}
+1.  **ABSOLUTE TRUTH (NO HALLUCINATIONS):**
+    * You are STRICTLY FORBIDDEN from inventing experiences, skills, or degrees.
+    * You must ONLY use facts present in the provided XML tags.
+    * If the Job Description asks for a skill you cannot find in the candidate's profile, DO NOT claim they have it. Focus on their adaptability or related skills instead.
 
-## Candidate Documents
-${cvContent || 'No documents provided'}
+2.  **ANTI-ROBOTIC TONE:**
+    * Do NOT use clichéd AI openers like "I am writing to express my interest..." or "I was thrilled to learn..."
+    * BANNED WORDS: "Delve," "tapestry," "testament," "unwavering," "dynamic landscape," "synergy," "cutting-edge" (unless in a technical context).
+    * Write in a confident, professional, but conversational human voice.
 
-## Instructions
-- ${languageInstruction}
-- Create a professional, engaging cover letter
-- Highlight relevant experience from the CV/documents
-- Match the candidate's skills to the job requirements
-- Keep the tone professional but personable
-- Structure: Opening hook, relevant experience, why this company, closing
-- Length: 300-400 words
-- Do NOT include placeholders - use the actual information provided
-- Output ONLY the cover letter text, no explanations or metadata`;
-}
+3.  **THE "SHOW, DON'T TELL" STRATEGY:**
+    * Instead of listing adjectives ("I am a strategic leader"), tell a micro-story from the <interview_transcripts> or <experience_docs> that *proves* it.
+    * Quantify results whenever numbers are available in the source text.
+
+### WRITING STRUCTURE
+1.  **The Hook:** A strong, direct opening connecting the candidate's specific background to the company's immediate challenges.
+2.  **The Evidence (Body):** 2-3 paragraphs mapping the candidate's *proven* achievements to the requirements in the <job_description>.
+3.  **The Close:** A confident call to action (e.g., requesting an interview).
+
+### FINAL CHECKS
+* Return *only* the body of the letter.
+* Ensure the tone matches the seniority implied in the <professional_summary>.
+* If the user provided specific requests in <user_instructions>, those override standard style guidelines.`;
 
 function buildUserMessage(
+  profile: GenerationRequest['profile'],
+  documents: GenerationRequest['documents'],
   jobTitle: string,
   companyName: string,
   jobDescription: string,
+  language: 'en' | 'da',
   customNotes?: string
 ): string {
-  let message = `Write a cover letter for this position:
+  // Categorize documents by type
+  const resumeDocs = documents.filter(d => d.type === 'cv');
+  const interviewDocs = documents.filter(d =>
+    d.type === 'experience' && d.name.toLowerCase().includes('interview')
+  );
+  const supportingDocs = documents.filter(d =>
+    d.type === 'experience' && !d.name.toLowerCase().includes('interview')
+  );
+  const otherDocs = documents.filter(d => d.type === 'other');
 
-## Job Title
-${jobTitle}
+  // Build XML structure
+  let message = '';
 
-## Company
-${companyName || 'Not specified'}
+  // Job Description (always present)
+  message += `<job_description>\nJob Title: ${jobTitle}\nCompany: ${companyName || 'Not specified'}\n\n${jobDescription}\n</job_description>\n\n`;
 
-## Job Description
-${jobDescription}`;
+  // Candidate Profile
+  message += '<candidate_profile>\n';
 
-  if (customNotes) {
-    message += `\n\n## Additional Instructions\n${customNotes}`;
+  // Professional Summary (from profile)
+  if (profile.summary?.trim()) {
+    message += `    <professional_summary>\nName: ${profile.name}\nLocation: ${profile.location}\n\n${profile.summary}\n    </professional_summary>\n\n`;
   }
+
+  // Resume/CV documents
+  if (resumeDocs.length > 0) {
+    const resumeContent = resumeDocs
+      .map(doc => `--- ${doc.name} ---\n${doc.content}`)
+      .join('\n\n');
+    message += `    <resume>\n${resumeContent}\n    </resume>\n\n`;
+  }
+
+  // Interview Transcripts (Gold Source)
+  if (interviewDocs.length > 0) {
+    const interviewContent = interviewDocs
+      .map(doc => `--- ${doc.name} ---\n${doc.content}`)
+      .join('\n\n');
+    message += `    <interview_transcripts>\n${interviewContent}\n    </interview_transcripts>\n\n`;
+  }
+
+  // Supporting Experience documents
+  const allSupportingDocs = [...supportingDocs, ...otherDocs];
+  if (allSupportingDocs.length > 0) {
+    const supportingContent = allSupportingDocs
+      .map(doc => `--- ${doc.name} ---\n${doc.content}`)
+      .join('\n\n');
+    message += `    <supporting_experience>\n${supportingContent}\n    </supporting_experience>\n\n`;
+  }
+
+  message += '</candidate_profile>\n\n';
+
+  // User Instructions (custom notes + language)
+  const languageInstruction = language === 'da'
+    ? 'Write the cover letter in Danish (Dansk).'
+    : 'Write the cover letter in English.';
+
+  const instructions = [languageInstruction];
+  if (customNotes?.trim()) {
+    instructions.push(customNotes.trim());
+  }
+
+  message += `<user_instructions>\n${instructions.join('\n')}\n</user_instructions>\n\n`;
+
+  // Task
+  message += `<task>\nWrite a cover letter for the role in <job_description> using the facts from <candidate_profile>.\nFollow the specific guidance in <user_instructions>.\n</task>`;
 
   return message;
 }
@@ -129,14 +179,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const body = req.body as GenerationRequest;
-    const { profile, documents, jobTitle, companyName, jobDescription, language = 'da', customNotes } = body;
+    const { profile, documents, jobTitle, companyName, jobDescription, language = 'en', customNotes } = body;
 
     const anthropic = new Anthropic({
       apiKey: anthropicKey,
     });
 
-    const system = buildSystemPrompt(profile, documents, language);
-    const userMessage = buildUserMessage(jobTitle, companyName, jobDescription, customNotes);
+    const userMessage = buildUserMessage(
+      profile,
+      documents,
+      jobTitle,
+      companyName,
+      jobDescription,
+      language,
+      customNotes
+    );
 
     // Set up streaming response
     res.setHeader('Content-Type', 'text/event-stream');
@@ -146,7 +203,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const stream = await anthropic.messages.stream({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
-      system,
+      temperature: 0.35, // Low temperature for factual accuracy, some creativity in phrasing
+      system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     });
 
