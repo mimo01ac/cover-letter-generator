@@ -10,6 +10,32 @@ import { scrapeJobPosting } from '../../services/jobScraper';
 import { analyzeCoverLetter } from '../../services/feedbackAnalyzer';
 import type { Profile, CoverLetterFeedback } from '../../types';
 
+// Example data for onboarding
+const EXAMPLE_JOB_DATA = {
+  jobTitle: 'Senior Frontend Developer',
+  companyName: 'TechVentures Inc.',
+  jobDescription: `We are looking for a Senior Frontend Developer to join our growing team.
+
+Responsibilities:
+• Build and maintain responsive web applications using React and TypeScript
+• Collaborate with designers and backend engineers to deliver exceptional user experiences
+• Write clean, maintainable, and well-tested code
+• Mentor junior developers and contribute to technical decisions
+• Participate in code reviews and architectural discussions
+
+Requirements:
+• 5+ years of experience in frontend development
+• Strong proficiency in React, TypeScript, and modern CSS
+• Experience with state management (Redux, Zustand, or similar)
+• Familiarity with testing frameworks (Jest, React Testing Library)
+• Excellent communication and teamwork skills
+
+Nice to have:
+• Experience with Next.js or other React frameworks
+• Knowledge of accessibility standards (WCAG)
+• Contributions to open-source projects`,
+};
+
 export function Generator() {
   const navigate = useNavigate();
   const {
@@ -193,6 +219,12 @@ export function Generator() {
     a.download = `cover-letter-${companyName || 'job'}-${new Date().toISOString().split('T')[0]}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const loadExampleData = () => {
+    setJobTitle(EXAMPLE_JOB_DATA.jobTitle);
+    setCompanyName(EXAMPLE_JOB_DATA.companyName);
+    handleJobDescriptionChange(EXAMPLE_JOB_DATA.jobDescription);
   };
 
   if (loading) {
@@ -495,28 +527,78 @@ export function Generator() {
             )}
           </div>
 
-          {/* Paper Document */}
+          {/* Paper Document or Onboarding Guide */}
           {generatedLetter ? (
             <div className="paper-document rounded-lg whitespace-pre-wrap text-base leading-relaxed max-h-[60vh] overflow-y-auto">
               {generatedLetter}
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-12 flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">
-              <div className="text-center">
-                <svg
-                  className="w-12 h-12 mx-auto mb-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white text-center mb-6">
+                How it Works
+              </h3>
+
+              <div className="space-y-5">
+                {/* Step 1 */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-800 dark:text-white">Import Job Description</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Paste a URL or copy the job posting text directly
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-800 dark:text-white">Verify Profile Details</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Ensure your CV and experience documents are up to date
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-800 dark:text-white">Generate & Refine</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      AI creates your letter, then chat to perfect it
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Load Example Data Button */}
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={loadExampleData}
+                  className="w-full py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <p>Your cover letter will appear here</p>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  Load Example Data
+                </button>
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-2">
+                  Try it out with sample job data
+                </p>
               </div>
             </div>
           )}
