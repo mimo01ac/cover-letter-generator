@@ -1,4 +1,5 @@
 export { ProfilePage } from './ProfilePage';
 export { ProfileForm } from './ProfileForm';
-export { DocumentUpload } from './DocumentUpload';
+export { DocumentUploadModal } from './DocumentUploadModal';
 export { DocumentList } from './DocumentList';
+export { InterviewModal } from './InterviewModal';
