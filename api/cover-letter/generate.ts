@@ -89,6 +89,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Check required environment variables
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('Missing ANTHROPIC_API_KEY environment variable');
+    return res.status(500).json({ error: 'Server configuration error: Missing API key' });
+  }
+
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    console.error('Missing Supabase environment variables');
+    return res.status(500).json({ error: 'Server configuration error: Missing database config' });
+  }
+
   // Verify auth token
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
@@ -97,37 +108,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const token = authHeader.slice(7);
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
-    {
-      global: {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    }
-  );
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const body = req.body as GenerationRequest;
-  const { profile, documents, jobTitle, companyName, jobDescription, language = 'da', customNotes } = body;
-
-  const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  });
-
-  const system = buildSystemPrompt(profile, documents, language);
-  const userMessage = buildUserMessage(jobTitle, companyName, jobDescription, customNotes);
-
-  // Set up streaming response
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
   try {
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const body = req.body as GenerationRequest;
+    const { profile, documents, jobTitle, companyName, jobDescription, language = 'da', customNotes } = body;
+
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
+    const system = buildSystemPrompt(profile, documents, language);
+    const userMessage = buildUserMessage(jobTitle, companyName, jobDescription, customNotes);
+
+    // Set up streaming response
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
     const stream = await anthropic.messages.stream({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
@@ -144,8 +155,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (error) {
-    console.error('Claude API error:', error);
-    res.write(`data: ${JSON.stringify({ error: 'Generation failed' })}\n\n`);
+    console.error('API error:', error);
+    const message = error instanceof Error ? error.message : 'Generation failed';
+
+    // If headers haven't been sent yet, return JSON error
+    if (!res.headersSent) {
+      return res.status(500).json({ error: message });
+    }
+
+    // Otherwise send error through stream
+    res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
     res.end();
   }
 }
