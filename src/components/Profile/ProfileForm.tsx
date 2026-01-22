@@ -142,7 +142,7 @@ export function ProfileForm({ profile, onSave }: ProfileFormProps) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Professional Summary
+          Professional Summary <span className="text-gray-400 font-normal">(optional)</span>
         </label>
         <textarea
           name="summary"
@@ -152,6 +152,9 @@ export function ProfileForm({ profile, onSave }: ProfileFormProps) {
           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
           placeholder="Brief summary of your professional background and key skills..."
         />
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          You can skip this for now. Your CV can be uploaded after creating your profile.
+        </p>
       </div>
 
       {error && (
