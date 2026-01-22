@@ -37,6 +37,7 @@ export function Generator() {
   const [isScraping, setIsScraping] = useState(false);
   const [feedback, setFeedback] = useState<CoverLetterFeedback | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isJobDetailsOpen, setIsJobDetailsOpen] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -73,7 +74,7 @@ export function Generator() {
 
   const handleJobDescriptionChange = (value: string) => {
     setJobDescription(value);
-    
+
     // Detect language when job description is provided
     if (value.trim().length > 50) {
       const detected = detectLanguage(value);
@@ -150,6 +151,9 @@ export function Generator() {
       setCurrentLetter(letter);
       clearChat();
 
+      // Collapse job details after generation
+      setIsJobDetailsOpen(false);
+
       // Automatically analyze the generated cover letter
       setIsAnalyzing(true);
       try {
@@ -220,6 +224,7 @@ export function Generator() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
           Generate Cover Letter
@@ -242,178 +247,219 @@ export function Generator() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Input Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-            Job Details
-          </h2>
-
-          {/* URL Scraper */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Paste Job Posting URL (optional)
-            </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-              Must be a publicly accessible URL. Links requiring login (e.g., LinkedIn) will not work.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={jobUrl}
-                onChange={(e) => setJobUrl(e.target.value)}
-                placeholder="https://example.com/job-posting"
-                disabled={isScraping}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
-              />
-              <button
-                onClick={handleScrapeUrl}
-                disabled={isScraping || !jobUrl.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      {/* Two-Column Split-Screen Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* Left Column - Inputs & Feedback */}
+        <div className="space-y-6">
+          {/* Collapsible Job Details Accordion */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+            {/* Accordion Header */}
+            <button
+              onClick={() => setIsJobDetailsOpen(!isJobDetailsOpen)}
+              className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+                Job Details
+              </h2>
+              <svg
+                className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                  isJobDetailsOpen ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                {isScraping ? (
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Accordion Content */}
+            <div
+              className={`transition-all duration-300 ease-in-out ${
+                isJobDetailsOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+              }`}
+            >
+              <div className="px-6 pb-6 space-y-4 border-t border-gray-100 dark:border-gray-700">
+                {/* URL Scraper */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Paste Job Posting URL (optional)
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    Must be a publicly accessible URL. Links requiring login (e.g., LinkedIn) will not work.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={jobUrl}
+                      onChange={(e) => setJobUrl(e.target.value)}
+                      placeholder="https://example.com/job-posting"
+                      disabled={isScraping}
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
                     />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                ) : (
-                  'Scrape'
+                    <button
+                      onClick={handleScrapeUrl}
+                      disabled={isScraping || !jobUrl.trim()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {isScraping ? (
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          Import
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Job Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    placeholder="Senior Software Engineer"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    placeholder="Acme Inc."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Job Description *
+                  </label>
+                  <textarea
+                    value={jobDescription}
+                    onChange={(e) => handleJobDescriptionChange(e.target.value)}
+                    rows={8}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                    placeholder="Paste the full job description here..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Custom Notes (optional)
+                  </label>
+                  <textarea
+                    value={customNotes}
+                    onChange={(e) => setCustomNotes(e.target.value)}
+                    rows={2}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                    placeholder="E.g., Focus on my leadership experience, don't mention my gap year..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Language
+                  </label>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as 'en' | 'da')}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="en">English</option>
+                    <option value="da">Danish (Dansk)</option>
+                  </select>
+                  {detectedLanguage && detectedLanguage !== language && (
+                    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                      Detected: {detectedLanguage === 'da' ? 'Danish' : 'English'} (can be overridden above)
+                    </p>
+                  )}
+                </div>
+
+                {error && (
+                  <p className="text-red-500 text-sm">{error}</p>
                 )}
-              </button>
+
+                <button
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isGenerating ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                      </svg>
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate Cover Letter'
+                  )}
+                </button>
+
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Using profile: <strong>{currentProfile.name}</strong>
+                  {documents.length > 0 && (
+                    <span> with {documents.length} document(s)</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Job Title *
-            </label>
-            <input
-              type="text"
-              value={jobTitle}
-              onChange={(e) => setJobTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              placeholder="Senior Software Engineer"
+          {/* Feedback Analysis Section - Now in Left Column */}
+          {(generatedLetter || isAnalyzing) && (
+            <FeedbackAnalysis
+              feedback={feedback}
+              isLoading={isAnalyzing}
+              language={language}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Company Name
-            </label>
-            <input
-              type="text"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              placeholder="Acme Inc."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Job Description *
-            </label>
-            <textarea
-              value={jobDescription}
-              onChange={(e) => handleJobDescriptionChange(e.target.value)}
-              rows={12}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
-              placeholder="Paste the full job description here..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Custom Notes (optional)
-            </label>
-            <textarea
-              value={customNotes}
-              onChange={(e) => setCustomNotes(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
-              placeholder="E.g., Focus on my leadership experience, don't mention my gap year, emphasize Python skills..."
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Add specific instructions to guide the AI when writing your cover letter
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Language
-            </label>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as 'en' | 'da')}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            >
-              <option value="en">English</option>
-              <option value="da">Danish (Dansk)</option>
-            </select>
-            {detectedLanguage && detectedLanguage !== language && (
-              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                Detected: {detectedLanguage === 'da' ? 'Danish' : 'English'} (can be overridden above)
-              </p>
-            )}
-          </div>
-
-          {error && (
-            <p className="text-red-500 text-sm">{error}</p>
           )}
-
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isGenerating ? (
-              <>
-                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-                Generating...
-              </>
-            ) : (
-              'Generate Cover Letter'
-            )}
-          </button>
-
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Using profile: <strong>{currentProfile.name}</strong>
-            {documents.length > 0 && (
-              <span> with {documents.length} document(s)</span>
-            )}
-          </div>
         </div>
 
-        {/* Output Section - Paper Document Style */}
-        <div className="space-y-4">
+        {/* Right Column - Sticky Paper Document & Refinement */}
+        <div className="lg:sticky lg:top-4 space-y-4">
+          {/* Header with actions */}
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-              Generated Cover Letter
+              Your Cover Letter
             </h2>
             {generatedLetter && (
               <div className="flex gap-2">
@@ -449,8 +495,9 @@ export function Generator() {
             )}
           </div>
 
+          {/* Paper Document */}
           {generatedLetter ? (
-            <div className="paper-document rounded-lg whitespace-pre-wrap text-base leading-relaxed">
+            <div className="paper-document rounded-lg whitespace-pre-wrap text-base leading-relaxed max-h-[60vh] overflow-y-auto">
               {generatedLetter}
             </div>
           ) : (
@@ -473,33 +520,22 @@ export function Generator() {
               </div>
             </div>
           )}
+
+          {/* Refinement Tools - Now directly below the letter */}
+          {generatedLetter && (
+            <ChatRefinement
+              jobDescription={jobDescription}
+              jobTitle={jobTitle}
+              companyName={companyName}
+              initialLetter={generatedLetter}
+              language={language}
+              onLetterUpdated={(letter) => {
+                setGeneratedLetter(letter);
+              }}
+            />
+          )}
         </div>
       </div>
-
-      {/* Feedback Analysis Section */}
-      {(generatedLetter || isAnalyzing) && (
-        <FeedbackAnalysis
-          feedback={feedback}
-          isLoading={isAnalyzing}
-          language={language}
-        />
-      )}
-
-      {/* Chat Refinement Section */}
-      {generatedLetter && (
-        <div>
-          <ChatRefinement
-            jobDescription={jobDescription}
-            jobTitle={jobTitle}
-            companyName={companyName}
-            initialLetter={generatedLetter}
-            language={language}
-            onLetterUpdated={(letter) => {
-              setGeneratedLetter(letter);
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 }
