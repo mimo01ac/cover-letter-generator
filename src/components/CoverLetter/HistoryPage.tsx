@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../stores/useStore';
 import { getCoverLettersByProfile, deleteCoverLetter, getAllProfiles } from '../../services/db';
 import { ChatRefinement } from './ChatRefinement';
@@ -8,6 +9,7 @@ import { detectLanguage } from '../../utils/languageDetection';
 import type { CoverLetter, Profile, CoverLetterFeedback } from '../../types';
 
 export function HistoryPage() {
+  const navigate = useNavigate();
   const { currentProfile, setCurrentProfile, setCurrentLetter, clearChat } = useStore();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
@@ -34,6 +36,10 @@ export function HistoryPage() {
       setProfiles(allProfiles);
       if (allProfiles.length > 0 && !currentProfile) {
         setCurrentProfile(allProfiles[0]);
+      } else if (allProfiles.length === 0) {
+        // No profile exists - redirect to profile page
+        navigate('/profile');
+        return;
       }
     } catch (err) {
       console.error('Failed to load profiles:', err);

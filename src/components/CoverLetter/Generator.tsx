@@ -81,6 +81,10 @@ export function Generator() {
       setProfiles(allProfiles);
       if (allProfiles.length > 0 && !currentProfile) {
         setCurrentProfile(allProfiles[0]);
+      } else if (allProfiles.length === 0) {
+        // No profile exists - redirect to profile page
+        navigate('/profile');
+        return;
       }
     } catch (err) {
       console.error('Failed to load profiles:', err);

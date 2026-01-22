@@ -23,14 +23,14 @@ export function Navigation() {
 
         {user && (
           <div className="flex items-center gap-2">
-            <NavLink to="/" className={linkClass}>
-              Generate
-            </NavLink>
             <NavLink to="/profile" className={linkClass}>
-              Profile
+              My Profile
+            </NavLink>
+            <NavLink to="/" className={linkClass}>
+              New Letter
             </NavLink>
             <NavLink to="/history" className={linkClass}>
-              History
+              My Letters
             </NavLink>
             <NavLink to="/settings" className={linkClass}>
               Settings
