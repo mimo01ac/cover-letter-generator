@@ -83,20 +83,28 @@ export async function extractFacts(
   documents: DocumentInput[],
   anthropicKey: string
 ): Promise<CandidateFactInventory> {
-  const anthropic = new Anthropic({
-    apiKey: anthropicKey,
-  });
-
   // Build document content for extraction
   let documentContent = '';
 
-  if (profile.summary?.trim()) {
+  if (profile?.summary?.trim()) {
     documentContent += `--- Professional Summary ---\n${profile.summary}\n\n`;
   }
 
-  for (const doc of documents) {
-    documentContent += `--- ${doc.name} (${doc.type}) ---\n${doc.content}\n\n`;
+  for (const doc of documents || []) {
+    if (doc?.content?.trim()) {
+      documentContent += `--- ${doc.name} (${doc.type}) ---\n${doc.content}\n\n`;
+    }
   }
+
+  // Return empty inventory if no content to extract from
+  if (!documentContent.trim()) {
+    console.log('No document content to extract facts from');
+    return createEmptyInventory();
+  }
+
+  const anthropic = new Anthropic({
+    apiKey: anthropicKey,
+  });
 
   const response = await anthropic.messages.create({
     model: 'claude-3-5-haiku-20241022',

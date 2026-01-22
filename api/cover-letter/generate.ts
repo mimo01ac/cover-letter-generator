@@ -216,7 +216,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { profile, documents, jobTitle, companyName, jobDescription, language = 'en', customNotes } = body;
 
     // Extract verified facts from candidate documents using Haiku (fast, cheap)
-    const factInventory = await extractFacts(profile, documents, anthropicKey);
+    // Wrapped in try-catch to fail gracefully if extraction fails
+    let factInventory: CandidateFactInventory = {
+      skills: [],
+      achievements: [],
+      credentials: [],
+      companies: [],
+    };
+
+    try {
+      factInventory = await extractFacts(profile, documents, anthropicKey);
+    } catch (extractError) {
+      console.error('Fact extraction failed, continuing without inventory:', extractError);
+      // Continue with empty inventory - generation will still work
+    }
 
     const anthropic = new Anthropic({
       apiKey: anthropicKey,
