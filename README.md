@@ -1,17 +1,18 @@
 # Cover Letter Generator
 
-A React web application for creating personalized cover letters using AI. Features profile management, CV upload, AI-powered cover letter generation with feedback analysis, and an AI phone interview feature.
+A React web application for creating personalized cover letters using AI. Features profile management, CV upload, AI-powered cover letter generation with anti-hallucination safeguards, feedback analysis, and an AI phone interview feature.
 
 ## Features
 
 - **Profile Management**: Store your personal information and upload documents (CV, experience notes)
 - **AI Cover Letter Generation**: Uses Anthropic's Claude API with streaming responses
+- **Anti-Hallucination System**: Pre-extracts verified facts from your documents to prevent fabricated claims
 - **Feedback Analysis**: Automatic match score, improvement suggestions, and keyword analysis
 - **Iterative Refinement**: Chat interface to refine the generated letter with follow-up requests
 - **Job URL Scraping**: Automatically extract job descriptions from URLs (supports jobindex.dk and other public job postings)
 - **AI Phone Interview**: Vapi.ai-powered phone interviews that analyze your CV and generate personalized insights
 - **Multi-language Support**: Detects Danish/English and generates appropriate cover letters
-- **Secure Authentication**: Email/password authentication via Supabase Auth
+- **Secure Authentication**: Email/password authentication via Supabase Auth with password reset
 - **Cloud Storage**: All data securely stored in Supabase PostgreSQL with Row Level Security
 
 ## Tech Stack
@@ -20,9 +21,11 @@ A React web application for creating personalized cover letters using AI. Featur
 - **Styling**: Tailwind CSS 4
 - **State Management**: Zustand
 - **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth (email/password)
+- **Authentication**: Supabase Auth (email/password with password reset)
 - **Backend**: Vercel Serverless Functions
 - **AI**: Anthropic Claude API (server-side)
+  - Claude 3.5 Haiku for fact extraction
+  - Claude Sonnet 4 for cover letter generation
 - **Voice Interview**: Vapi.ai (server-side)
 
 ## Architecture
@@ -117,12 +120,13 @@ VAPI_PHONE_NUMBER_ID=...      (optional)
 1. In Supabase dashboard, go to Authentication > Providers
 2. Ensure Email provider is enabled
 3. Optionally disable email confirmation for testing
+4. Customize email templates (Auth > Email Templates) to brand your password reset emails
 
 ## Usage
 
 1. **Create an account**: Sign up with email and password
 
-2. **Set up your profile**: Go to Profile and fill in your information
+2. **Set up your profile**: Go to Profile and fill in your information (click "Create Profile to Continue")
 
 3. **Upload documents**: Upload your CV and any relevant experience documents
 
@@ -138,12 +142,14 @@ VAPI_PHONE_NUMBER_ID=...      (optional)
 
 7. **AI Interview** (optional): Start an AI phone interview for deeper insights
 
+8. **Reset password**: Click "Forgot password?" on the login page if needed
+
 ## Project Structure
 
 ```
 ├── api/                           # Vercel serverless functions
 │   ├── cover-letter/
-│   │   ├── generate.ts            # Generate cover letter (streaming)
+│   │   ├── generate.ts            # Generate cover letter (streaming) + fact extraction
 │   │   ├── refine.ts              # Refine via chat (streaming)
 │   │   └── analyze.ts             # Feedback analysis
 │   └── interview/
@@ -155,7 +161,7 @@ VAPI_PHONE_NUMBER_ID=...      (optional)
 │   └── schema.sql                 # Database schema with RLS policies
 ├── src/
 │   ├── components/
-│   │   ├── Auth/                  # Login/signup page
+│   │   ├── Auth/                  # Login/signup/forgot password/reset password
 │   │   ├── Layout/                # App shell, navigation
 │   │   ├── Profile/               # Profile form, document upload, interview
 │   │   ├── CoverLetter/           # Generation, refinement, history, feedback
@@ -181,9 +187,28 @@ VAPI_PHONE_NUMBER_ID=...      (optional)
 ## Security
 
 - **API Keys**: All API keys (Anthropic, Vapi) are stored server-side only
-- **Authentication**: JWT-based sessions via Supabase Auth
+- **Authentication**: JWT-based sessions via Supabase Auth with password reset support
 - **Data Isolation**: Row Level Security ensures users only access their own data
+- **Anti-Hallucination**: Fact extraction prevents fabricated claims in cover letters
 - **No Indexing**: Site is configured with noindex/nofollow meta tags
+
+## Anti-Hallucination System
+
+The cover letter generator includes safeguards against AI hallucinations:
+
+1. **Fact Extraction**: Before generating, Claude Haiku extracts verified facts from your documents:
+   - Skills (with confidence levels: explicit/demonstrated/mentioned)
+   - Achievements (with exact metrics only if present)
+   - Credentials (degrees, certifications, job titles)
+   - Companies worked at
+
+2. **Strict Claim Rules**: The generation prompt enforces:
+   - Every skill claim must exist in the fact inventory
+   - No fabricated metrics or percentages
+   - No superlatives ("expert", "extensive") without supporting evidence
+   - No degrees or certifications not in your documents
+
+3. **Cost**: ~$0.001 per extraction (~5% increase in API costs)
 
 ## Available Scripts
 
@@ -200,6 +225,12 @@ If you can't sign in:
 2. Ensure the Email provider is enabled in Supabase Auth settings
 3. Check browser console for specific error messages
 
+### Forgot Password Not Working
+
+1. Check that the password reset email template is configured in Supabase
+2. Verify the redirect URL in AuthContext.tsx matches your domain
+3. Check spam folder for reset emails
+
 ### Cover Letter Generation Fails
 
 1. Verify `ANTHROPIC_API_KEY` is set correctly in Vercel
@@ -211,6 +242,12 @@ If you can't sign in:
 1. Verify `VAPI_API_KEY` and `VAPI_PHONE_NUMBER_ID` are set in Vercel
 2. International calls require a paid Vapi phone number
 3. Check Vercel function logs for specific errors
+
+### Profile/Document Save Fails
+
+1. Ensure you've created a profile before uploading documents
+2. Check browser console for Supabase error messages
+3. Verify the schema has been applied in Supabase SQL Editor
 
 ### PDF Parsing Issues
 

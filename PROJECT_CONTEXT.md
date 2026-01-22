@@ -1,10 +1,10 @@
 # Cover Letter Generator - Project Context
 
-Last updated: 2025-01-21
+Last updated: 2025-01-22
 
 ## Project Overview
 
-A React + TypeScript application for generating personalized cover letters using AI (Claude API). The app includes profile management, CV upload, AI-powered cover letter generation with feedback analysis, and an AI phone interview feature.
+A React + TypeScript application for generating personalized cover letters using AI (Claude API). The app includes profile management, CV upload, AI-powered cover letter generation with anti-hallucination fact extraction, feedback analysis, and an AI phone interview feature.
 
 ## Tech Stack
 
@@ -12,9 +12,11 @@ A React + TypeScript application for generating personalized cover letters using
 - **Styling:** Tailwind CSS 4
 - **State Management:** Zustand
 - **Database:** Supabase (PostgreSQL)
-- **Authentication:** Supabase Auth (email/password)
+- **Authentication:** Supabase Auth (email/password with password reset)
 - **Backend:** Vercel Serverless Functions
 - **AI:** Anthropic Claude API (server-side)
+  - Claude 3.5 Haiku for fact extraction
+  - Claude Sonnet 4 for cover letter generation
 - **Voice Interview:** Vapi.ai (server-side)
 
 ## Architecture
@@ -46,15 +48,24 @@ A React + TypeScript application for generating personalized cover letters using
 - Email/password authentication
 - JWT-based session management
 - Automatic token refresh
+- **Forgot password flow** with email reset
+- **Password reset page** at `/reset-password`
 - Protected routes via AuthContext
-- Files: `src/contexts/AuthContext.tsx`, `src/components/Auth/LoginPage.tsx`
+- Files: `src/contexts/AuthContext.tsx`, `src/components/Auth/LoginPage.tsx`, `src/components/Auth/ResetPasswordPage.tsx`
 
-### 2. Cover Letter Generation
+### 2. Cover Letter Generation with Anti-Hallucination
+- **Fact extraction step** using Claude Haiku (~500ms, ~$0.001)
+  - Extracts skills, achievements, credentials, companies from documents
+  - Creates verified "allow list" of claims
+- **Strict claim rules** in generation prompt
+  - Every skill claim must exist in fact inventory
+  - Metrics must come verbatim from inventory
+  - No superlatives without supporting evidence
 - Job URL scraping with CORS proxy fallback (supports jobindex.dk)
 - Custom notes field for user instructions to AI
 - Language detection (Danish/English)
 - Streaming response display via Server-Sent Events
-- Files: `src/components/CoverLetter/Generator.tsx`, `src/services/claude.ts`, `api/cover-letter/generate.ts`
+- Files: `api/cover-letter/generate.ts` (includes inlined fact extraction)
 
 ### 3. Feedback Analysis
 - Automatic analysis after cover letter generation
@@ -75,7 +86,14 @@ A React + TypeScript application for generating personalized cover letters using
 - Saves insights as document for future cover letters
 - Files: `src/components/Profile/InterviewModal.tsx`, `src/services/vapiInterview.ts`, `api/interview/*`
 
-### 5. History
+### 5. Profile Management
+- Profile creation with clear UX (green "Create Profile to Continue" button)
+- Success messages after save
+- Documents require profile to exist first
+- Better error messages for debugging
+- Files: `src/components/Profile/ProfilePage.tsx`, `src/components/Profile/ProfileForm.tsx`
+
+### 6. History
 - View past cover letters
 - Analyze old cover letters with feedback
 - Chat refinement for modifications
@@ -85,7 +103,7 @@ A React + TypeScript application for generating personalized cover letters using
 ```
 ├── api/                           # Vercel serverless functions
 │   ├── cover-letter/
-│   │   ├── generate.ts            # Generate cover letter (streaming)
+│   │   ├── generate.ts            # Generate cover letter (streaming) + fact extraction
 │   │   ├── refine.ts              # Refine via chat (streaming)
 │   │   └── analyze.ts             # Feedback analysis
 │   └── interview/
@@ -98,7 +116,8 @@ A React + TypeScript application for generating personalized cover letters using
 ├── src/
 │   ├── components/
 │   │   ├── Auth/
-│   │   │   └── LoginPage.tsx      # Login/signup page
+│   │   │   ├── LoginPage.tsx      # Login/signup/forgot password
+│   │   │   └── ResetPasswordPage.tsx # Password reset page
 │   │   ├── CoverLetter/
 │   │   │   ├── Generator.tsx      # Main cover letter generation
 │   │   │   ├── ChatRefinement.tsx # Refine letters via chat
@@ -109,20 +128,20 @@ A React + TypeScript application for generating personalized cover letters using
 │   │   │   └── Navigation.tsx     # Top navigation with sign out
 │   │   ├── Profile/
 │   │   │   ├── ProfilePage.tsx    # Profile management
-│   │   │   ├── ProfileForm.tsx    # Profile edit form
+│   │   │   ├── ProfileForm.tsx    # Profile edit form with success messages
 │   │   │   ├── DocumentUpload.tsx # CV/document upload
 │   │   │   ├── DocumentList.tsx   # List uploaded documents
 │   │   │   └── InterviewModal.tsx # AI phone interview modal
 │   │   └── Settings/
 │   │       └── SettingsPage.tsx   # Account settings & sign out
 │   ├── contexts/
-│   │   └── AuthContext.tsx        # Supabase auth context
+│   │   └── AuthContext.tsx        # Supabase auth context (includes resetPassword)
 │   ├── lib/
 │   │   ├── supabase.ts            # Supabase client
 │   │   └── database.types.ts      # TypeScript types for DB
 │   ├── services/
 │   │   ├── claude.ts              # Claude API client (calls Vercel)
-│   │   ├── db.ts                  # Supabase database operations
+│   │   ├── db.ts                  # Supabase database operations (with error logging)
 │   │   ├── feedbackAnalyzer.ts    # Analysis client (calls Vercel)
 │   │   ├── interviewGuideCache.ts # Interview guide caching
 │   │   ├── jobScraper.ts          # URL scraping with CORS proxy
@@ -130,7 +149,7 @@ A React + TypeScript application for generating personalized cover letters using
 │   ├── stores/
 │   │   └── useStore.ts            # Zustand state (UI state only)
 │   ├── types/
-│   │   └── index.ts               # TypeScript interfaces
+│   │   └── index.ts               # TypeScript interfaces (includes CandidateFactInventory)
 │   └── utils/
 │       └── languageDetection.ts   # Detect Danish/English
 └── vercel.json                    # Vercel configuration
@@ -234,6 +253,13 @@ VITE_SUPABASE_ANON_KEY=eyJ...
 4. Vercel functions verify token with Supabase
 5. RLS policies enforce data isolation
 
+### Password Reset Flow
+1. User clicks "Forgot password?" on login page
+2. Enters email, clicks "Send Reset Email"
+3. Supabase sends email with reset link (redirects to `/reset-password`)
+4. User clicks link, enters new password
+5. Password updated, user redirected to login
+
 ### Row Level Security
 - All database tables have RLS enabled
 - Policies use `auth.uid()` to restrict access
@@ -259,6 +285,7 @@ VITE_SUPABASE_ANON_KEY=eyJ...
 3. **Configure Auth:**
    - In Supabase dashboard, configure email auth
    - Optionally disable email confirmation for testing
+   - Customize email templates (Auth > Email Templates) to brand password reset emails
 
 ## Configuration Notes
 
@@ -267,6 +294,14 @@ VITE_SUPABASE_ANON_KEY=eyJ...
 - Free US numbers only work for US calls
 - Danish numbers recommended for Danish users (~$2-5/month)
 - Interview guide is dynamically generated based on user's CV
+
+### Anti-Hallucination System
+- Uses Claude Haiku for fast fact extraction (~500ms)
+- Extracts skills with confidence levels (explicit/demonstrated/mentioned)
+- Extracts achievements with verbatim metrics only
+- Extracts credentials (degrees, certifications, job titles)
+- Generation prompt enforces strict claim rules
+- Cost: ~$0.001 per extraction (~5% increase)
 
 ### SEO
 - robots.txt blocks all crawlers
@@ -280,6 +315,8 @@ VITE_SUPABASE_ANON_KEY=eyJ...
 - Custom notes field allows user to direct AI (e.g., "focus on leadership experience")
 - Feedback shown automatically after generation
 - Loading states during auth check
+- Profile form shows success messages and green "Create Profile to Continue" button for new users
+- Forgot password link on login page
 
 ## Commands
 
@@ -290,6 +327,13 @@ npm run preview  # Preview production build
 ```
 
 ## Migration History
+
+### v2.1 - Anti-Hallucination & Auth Improvements (2025-01-22)
+- **Fact Extraction:** Added Claude Haiku pre-extraction step to verify claims
+- **Strict Claim Rules:** Enhanced prompt with mandatory fact inventory reference
+- **Forgot Password:** Added password reset flow with dedicated page
+- **Profile UX:** Improved profile creation flow with success messages
+- **Error Logging:** Better Supabase error messages for debugging
 
 ### v2.0 - Supabase + Vercel Migration (2025-01-21)
 - **Auth:** PIN-based → Supabase email/password
