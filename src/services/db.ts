@@ -25,7 +25,10 @@ export async function createProfile(profile: Omit<Profile, 'id' | 'createdAt' | 
     .select('id')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase createProfile error:', error);
+    throw new Error(`Failed to create profile: ${error.message}`);
+  }
   return data.id;
 }
 
@@ -107,7 +110,10 @@ export async function addDocument(document: Omit<Document, 'id' | 'createdAt'>):
     .select('id')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase addDocument error:', error);
+    throw new Error(`Failed to save document: ${error.message}`);
+  }
   return data.id;
 }
 

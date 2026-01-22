@@ -19,6 +19,7 @@ export function ProfileForm({ profile, onSave }: ProfileFormProps) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -35,6 +36,7 @@ export function ProfileForm({ profile, onSave }: ProfileFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setSaving(true);
 
     try {
@@ -47,6 +49,7 @@ export function ProfileForm({ profile, onSave }: ProfileFormProps) {
         const updatedProfile = { ...profile, ...formData };
         setCurrentProfile(updatedProfile);
         onSave(updatedProfile);
+        setSuccess('Profile updated successfully!');
       } else {
         const id = await createProfile(formData);
         const newProfile: Profile = {
@@ -57,6 +60,7 @@ export function ProfileForm({ profile, onSave }: ProfileFormProps) {
         };
         setCurrentProfile(newProfile);
         onSave(newProfile);
+        setSuccess('Profile created! You can now upload documents.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save profile');
@@ -68,6 +72,7 @@ export function ProfileForm({ profile, onSave }: ProfileFormProps) {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
+    setSuccess(''); // Clear success message when user edits
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -153,12 +158,20 @@ export function ProfileForm({ profile, onSave }: ProfileFormProps) {
         <p className="text-red-500 text-sm">{error}</p>
       )}
 
+      {success && (
+        <p className="text-green-600 dark:text-green-400 text-sm">{success}</p>
+      )}
+
       <button
         type="submit"
         disabled={saving}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`w-full text-white py-2 px-4 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+          profile?.id
+            ? 'bg-blue-600 hover:bg-blue-700'
+            : 'bg-green-600 hover:bg-green-700'
+        }`}
       >
-        {saving ? 'Saving...' : profile?.id ? 'Update Profile' : 'Create Profile'}
+        {saving ? 'Saving...' : profile?.id ? 'Update Profile' : 'Create Profile to Continue'}
       </button>
     </form>
   );

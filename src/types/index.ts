@@ -109,3 +109,29 @@ export interface CachedInterviewGuide {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface ExtractedSkill {
+  skill: string;
+  source: string;
+  context: string;
+  confidence: 'explicit' | 'demonstrated' | 'mentioned';
+}
+
+export interface ExtractedAchievement {
+  description: string;
+  metrics?: string;
+  source: string;
+}
+
+export interface ExtractedCredential {
+  type: 'degree' | 'certification' | 'title';
+  name: string;
+  source: string;
+}
+
+export interface CandidateFactInventory {
+  skills: ExtractedSkill[];
+  achievements: ExtractedAchievement[];
+  credentials: ExtractedCredential[];
+  companies: string[];
+}
