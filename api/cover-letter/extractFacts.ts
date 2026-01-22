@@ -1,5 +1,4 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { CandidateFactInventory, ExtractedSkill, ExtractedAchievement, ExtractedCredential } from '../../src/types';
 
 interface DocumentInput {
   name: string;
@@ -10,6 +9,32 @@ interface DocumentInput {
 interface ProfileInput {
   name: string;
   summary: string;
+}
+
+export interface ExtractedSkill {
+  skill: string;
+  source: string;
+  context: string;
+  confidence: 'explicit' | 'demonstrated' | 'mentioned';
+}
+
+export interface ExtractedAchievement {
+  description: string;
+  metrics?: string;
+  source: string;
+}
+
+export interface ExtractedCredential {
+  type: 'degree' | 'certification' | 'title';
+  name: string;
+  source: string;
+}
+
+export interface CandidateFactInventory {
+  skills: ExtractedSkill[];
+  achievements: ExtractedAchievement[];
+  credentials: ExtractedCredential[];
+  companies: string[];
 }
 
 const EXTRACTION_PROMPT = `You are a precise fact extractor. Extract ONLY verifiable facts from the candidate documents. Be conservative - if something isn't clearly stated, don't include it.

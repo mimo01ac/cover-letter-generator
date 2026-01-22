@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { extractFacts, formatFactInventory } from './extractFacts';
-import type { CandidateFactInventory } from '../../src/types';
+import { extractFacts, formatFactInventory, type CandidateFactInventory } from './extractFacts';
 
 interface GenerationRequest {
   profile: {
