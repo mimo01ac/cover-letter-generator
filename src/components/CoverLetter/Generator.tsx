@@ -547,13 +547,13 @@ export function Generator() {
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
                     <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-800 dark:text-white">Import Job Description</h4>
+                    <h4 className="font-medium text-gray-800 dark:text-white">Set Up Your Profile</h4>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Paste a URL or copy the job posting text directly
+                      Upload your CV and experience documents
                     </p>
                   </div>
                 </div>
@@ -562,13 +562,13 @@ export function Generator() {
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
                     <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-800 dark:text-white">Verify Profile Details</h4>
+                    <h4 className="font-medium text-gray-800 dark:text-white">Add Job Details</h4>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Ensure your CV and experience documents are up to date
+                      Paste a URL or copy the job posting text directly
                     </p>
                   </div>
                 </div>
