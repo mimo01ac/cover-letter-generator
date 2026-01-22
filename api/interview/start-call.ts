@@ -89,16 +89,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
+    const responseText = await response.text();
+    console.log('Vapi API response status:', response.status);
+    console.log('Vapi API response body:', responseText);
+
     if (!response.ok) {
-      const error = await response.text();
-      return res.status(response.status).json({ error: `Failed to start call: ${error}` });
+      return res.status(response.status).json({ error: `Vapi error (${response.status}): ${responseText}` });
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     return res.status(200).json({ callId: data.id });
   } catch (error) {
     console.error('Vapi API error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
     return res.status(500).json({ error: `Failed to start call: ${errorMessage}` });
   }
 }
