@@ -95,17 +95,26 @@ const SUMMARY_SYSTEM_PROMPT = `You are an expert CV writer creating a targeted e
 Write a concise 3-5 sentence executive summary (maximum 100 words) that:
 - Focuses on 2-3 most relevant qualifications for THIS specific role
 - Uses active voice and impactful language
-- Includes quantifiable achievements from the fact inventory when available
+- Includes quantifiable achievements when available
 - Mirrors job description terminology naturally
 - Avoids generic phrases like "results-driven professional", "dynamic leader", "passionate about"
 
 The summary should be written in first person and ready to place at the top of a CV.
 
+### DATA SOURCE HIERARCHY
+1. **<fact_inventory>:** Pre-extracted verified facts. Use these first when available.
+2. **<resume>:** The candidate's CV with work history, skills, and experience.
+3. **<interview_transcripts>:** Authentic voice, anecdotes, and STAR examples.
+4. **<supporting_experience>:** Additional context and achievements.
+
+**If the fact inventory is empty or sparse:** Extract facts directly from the <resume>, <interview_transcripts>, and <supporting_experience> sections. Apply the same strict verification rules - only claim what is explicitly stated or clearly demonstrated in those documents.
+
 STRICT RULES:
-- Only claim skills/achievements from <fact_inventory> or source documents
+- Only claim skills/achievements that are verifiable from the provided documents
 - No hallucinations or invented accomplishments
 - Keep it under 100 words
-- Make it specific to the target role, not generic`;
+- Make it specific to the target role, not generic
+- ALWAYS generate a summary if ANY source documents are provided`;
 
 const SYSTEM_PROMPT = `You are an expert Executive Career Coach and Professional Copywriter. Your goal is to write a high-impact, authentic cover letter that connects a candidate's verified experience to a specific job opening.
 
@@ -578,7 +587,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.write(`data: ${JSON.stringify({ type: 'cover_letter_done' })}\n\n`);
 
     // Now generate executive summary
-    const summaryUserMessage = `<job_description>
+    // Categorize documents for the summary (same as cover letter)
+    const resumeDocs = documents.filter(d => d.type === 'cv');
+    const interviewDocs = documents.filter(d =>
+      d.type === 'experience' && d.name.toLowerCase().includes('interview')
+    );
+    const supportingDocs = documents.filter(d =>
+      d.type === 'experience' && !d.name.toLowerCase().includes('interview')
+    );
+    const otherDocs = documents.filter(d => d.type === 'other');
+
+    let summaryUserMessage = `<job_description>
 Job Title: ${jobTitle}
 Company: ${companyName || 'Not specified'}
 
@@ -592,7 +611,34 @@ ${formatFactInventory(factInventory)}
 <candidate_profile>
 Name: ${profile.name}
 ${profile.summary ? `\nProfessional Summary:\n${profile.summary}` : ''}
-</candidate_profile>
+`;
+
+    // Include resume/CV documents
+    if (resumeDocs.length > 0) {
+      const resumeContent = resumeDocs
+        .map(doc => `--- ${doc.name} ---\n${doc.content}`)
+        .join('\n\n');
+      summaryUserMessage += `\n<resume>\n${resumeContent}\n</resume>\n`;
+    }
+
+    // Include interview transcripts
+    if (interviewDocs.length > 0) {
+      const interviewContent = interviewDocs
+        .map(doc => `--- ${doc.name} ---\n${doc.content}`)
+        .join('\n\n');
+      summaryUserMessage += `\n<interview_transcripts>\n${interviewContent}\n</interview_transcripts>\n`;
+    }
+
+    // Include supporting experience
+    const allSupportingDocs = [...supportingDocs, ...otherDocs];
+    if (allSupportingDocs.length > 0) {
+      const supportingContent = allSupportingDocs
+        .map(doc => `--- ${doc.name} ---\n${doc.content}`)
+        .join('\n\n');
+      summaryUserMessage += `\n<supporting_experience>\n${supportingContent}\n</supporting_experience>\n`;
+    }
+
+    summaryUserMessage += `</candidate_profile>
 
 Write a targeted executive summary for this candidate's CV, tailored for the ${jobTitle} role.`;
 
