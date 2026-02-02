@@ -92,14 +92,28 @@ CRITICAL RULES:
 
 const SUMMARY_SYSTEM_PROMPT = `You are an expert CV writer creating a targeted executive summary for a candidate's CV/resume.
 
-Write a concise 3-5 sentence executive summary (maximum 100 words) that:
+Your output must include TWO parts:
+
+## 1. PROFESSIONAL HEADLINE
+A punchy, pipe-separated headline (2-4 segments) that captures the candidate's core expertise areas relevant to the target role.
+Format: "Area of Expertise | Specialization | Key Strength"
+Examples:
+- "Executive Leader in Revenue Operations | CRM & AI Enablement | Commercial Excellence Across Global Markets"
+- "Senior Software Engineer | Cloud Architecture & DevOps | Scalable Systems Design"
+- "Marketing Director | Brand Strategy & Digital Transformation | B2B SaaS Growth"
+
+## 2. EXECUTIVE SUMMARY
+A concise 3-5 sentence summary (maximum 100 words) that:
 - Focuses on 2-3 most relevant qualifications for THIS specific role
 - Uses active voice and impactful language
 - Includes quantifiable achievements when available
 - Mirrors job description terminology naturally
 - Avoids generic phrases like "results-driven professional", "dynamic leader", "passionate about"
 
-The summary should be written in first person and ready to place at the top of a CV.
+The summary should be written in first person.
+
+### OUTPUT FORMAT
+Output the headline first on its own line, then a blank line, then the executive summary paragraph.
 
 ### DATA SOURCE HIERARCHY
 1. **<fact_inventory>:** Pre-extracted verified facts. Use these first when available.
@@ -112,9 +126,9 @@ The summary should be written in first person and ready to place at the top of a
 STRICT RULES:
 - Only claim skills/achievements that are verifiable from the provided documents
 - No hallucinations or invented accomplishments
-- Keep it under 100 words
+- Keep the summary under 100 words (headline is separate)
 - Make it specific to the target role, not generic
-- ALWAYS generate a summary if ANY source documents are provided`;
+- ALWAYS generate output if ANY source documents are provided`;
 
 const SYSTEM_PROMPT = `You are an expert Executive Career Coach and Professional Copywriter. Your goal is to write a high-impact, authentic cover letter that connects a candidate's verified experience to a specific job opening.
 

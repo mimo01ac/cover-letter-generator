@@ -97,14 +97,20 @@ ${jobDescription}
 ## Current Executive Summary
 ${currentSummary}
 
+## Expected Format
+The executive summary has two parts:
+1. **Professional Headline:** A pipe-separated headline (e.g., "Executive Leader in Revenue Operations | CRM & AI Enablement | Commercial Excellence")
+2. **Summary Paragraph:** 3-5 sentences, max 100 words
+
 ## Instructions
 - Make the requested changes to the executive summary
-- Keep it concise (3-5 sentences, max 100 words)
+- Preserve the two-part format (headline + summary paragraph)
+- Keep the summary concise (3-5 sentences, max 100 words)
 - Focus on qualifications most relevant to the target role
 - Use active voice and impactful language
 - Include quantifiable achievements when available
 - Avoid generic phrases like "results-driven professional"
-- Output ONLY the revised executive summary text
+- Output ONLY the revised headline and summary (headline first, blank line, then summary)
 - Do not include explanations unless specifically asked`;
 
   const anthropic = new Anthropic({
