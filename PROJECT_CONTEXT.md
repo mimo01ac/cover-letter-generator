@@ -1,6 +1,6 @@
 # Cover Letter Generator - Project Context
 
-Last updated: 2025-01-22
+Last updated: 2025-02-02
 
 ## Project Overview
 
@@ -67,7 +67,17 @@ A React + TypeScript application for generating personalized cover letters using
 - Streaming response display via Server-Sent Events
 - Files: `api/cover-letter/generate.ts` (includes inlined fact extraction)
 
-### 3. Feedback Analysis
+### 3. Executive Summary Generation & Refinement
+- **Auto-generated** alongside each cover letter
+- Tailored to the target job and company
+- **Chat-based refinement** with conversation history
+- **Quick action buttons**: "More specific", "Add metrics", "Shorter", "Leadership focus"
+- Streaming response display
+- Stored in database with cover letter (`executive_summary` column)
+- Works in both Generator and History pages
+- Files: `src/components/CoverLetter/SummaryRefinement.tsx`, `api/cover-letter/refine-summary.ts`
+
+### 4. Feedback Analysis
 - Automatic analysis after cover letter generation
 - Match score (0-100%)
 - 3-5 improvement suggestions
@@ -76,7 +86,7 @@ A React + TypeScript application for generating personalized cover letters using
 - Works in both Generator and History pages
 - Files: `src/components/CoverLetter/FeedbackAnalysis.tsx`, `src/services/feedbackAnalyzer.ts`, `api/cover-letter/analyze.ts`
 
-### 4. AI Phone Interview (Vapi.ai)
+### 5. AI Phone Interview (Vapi.ai)
 - Analyzes CV and generates custom interview guide
 - **Pre-generates interview guide in background when CV is uploaded** (no wait time)
 - Automatically regenerates guide when CV/experience documents change
@@ -86,25 +96,27 @@ A React + TypeScript application for generating personalized cover letters using
 - Saves insights as document for future cover letters
 - Files: `src/components/Profile/InterviewModal.tsx`, `src/services/vapiInterview.ts`, `api/interview/*`
 
-### 5. Profile Management
+### 6. Profile Management
 - Profile creation with clear UX (green "Create Profile to Continue" button)
 - Success messages after save
 - Documents require profile to exist first
 - Better error messages for debugging
 - Files: `src/components/Profile/ProfilePage.tsx`, `src/components/Profile/ProfileForm.tsx`
 
-### 6. History
-- View past cover letters
+### 7. History
+- View past cover letters with their executive summaries
 - Analyze old cover letters with feedback
-- Chat refinement for modifications
+- Chat refinement for cover letter modifications
+- Chat refinement for executive summary modifications
 
 ## File Structure
 
 ```
 ├── api/                           # Vercel serverless functions
 │   ├── cover-letter/
-│   │   ├── generate.ts            # Generate cover letter (streaming) + fact extraction
-│   │   ├── refine.ts              # Refine via chat (streaming)
+│   │   ├── generate.ts            # Generate cover letter + summary (streaming) + fact extraction
+│   │   ├── refine.ts              # Refine letter via chat (streaming)
+│   │   ├── refine-summary.ts      # Refine executive summary via chat (streaming)
 │   │   └── analyze.ts             # Feedback analysis
 │   └── interview/
 │       ├── generate-guide.ts      # Generate interview guide
@@ -121,8 +133,9 @@ A React + TypeScript application for generating personalized cover letters using
 │   │   ├── CoverLetter/
 │   │   │   ├── Generator.tsx      # Main cover letter generation
 │   │   │   ├── ChatRefinement.tsx # Refine letters via chat
+│   │   │   ├── SummaryRefinement.tsx # Refine executive summary via chat
 │   │   │   ├── FeedbackAnalysis.tsx # Score & suggestions display
-│   │   │   └── HistoryPage.tsx    # View past letters
+│   │   │   └── HistoryPage.tsx    # View past letters + summaries
 │   │   ├── Layout/
 │   │   │   ├── AppLayout.tsx      # Main layout with auth guard
 │   │   │   └── Navigation.tsx     # Top navigation with sign out
@@ -189,6 +202,7 @@ cover_letters (
   company_name TEXT,
   job_description TEXT,
   content TEXT,
+  executive_summary TEXT,  -- Tailored CV summary for the job
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ
 )
@@ -327,6 +341,13 @@ npm run preview  # Preview production build
 ```
 
 ## Migration History
+
+### v2.2 - Executive Summary Refinement (2025-02-02)
+- **Executive Summary Generation:** Cover letters now include a tailored CV executive summary
+- **Summary Refinement Chat:** New chat interface with quick actions to refine summaries
+- **Database:** Added `executive_summary` column to `cover_letters` table
+- **Store:** Added summary state management (currentSummary, summaryChatMessages)
+- **Files:** New `api/cover-letter/refine-summary.ts`, `src/components/CoverLetter/SummaryRefinement.tsx`
 
 ### v2.1 - Anti-Hallucination & Auth Improvements (2025-01-22)
 - **Fact Extraction:** Added Claude Haiku pre-extraction step to verify claims

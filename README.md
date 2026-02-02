@@ -6,6 +6,8 @@ A React web application for creating personalized cover letters using AI. Featur
 
 - **Profile Management**: Store your personal information and upload documents (CV, experience notes)
 - **AI Cover Letter Generation**: Uses Anthropic's Claude API with streaming responses
+- **Executive Summary Generation**: Automatically generates a tailored CV executive summary alongside each cover letter
+- **Summary Refinement**: Chat interface with quick actions to iteratively refine your executive summary
 - **Anti-Hallucination System**: Pre-extracts verified facts from your documents to prevent fabricated claims
 - **Feedback Analysis**: Automatic match score, improvement suggestions, and keyword analysis
 - **Iterative Refinement**: Chat interface to refine the generated letter with follow-up requests
@@ -140,6 +142,8 @@ VAPI_PHONE_NUMBER_ID=...      (optional)
 
 6. **Refine your letter**: Use the chat interface to make adjustments
 
+7. **Refine your executive summary**: Use quick actions or custom requests to perfect your CV summary
+
 7. **AI Interview** (optional): Start an AI phone interview for deeper insights
 
 8. **Reset password**: Click "Forgot password?" on the login page if needed
@@ -149,8 +153,9 @@ VAPI_PHONE_NUMBER_ID=...      (optional)
 ```
 ├── api/                           # Vercel serverless functions
 │   ├── cover-letter/
-│   │   ├── generate.ts            # Generate cover letter (streaming) + fact extraction
-│   │   ├── refine.ts              # Refine via chat (streaming)
+│   │   ├── generate.ts            # Generate cover letter + summary (streaming) + fact extraction
+│   │   ├── refine.ts              # Refine letter via chat (streaming)
+│   │   ├── refine-summary.ts      # Refine executive summary via chat (streaming)
 │   │   └── analyze.ts             # Feedback analysis
 │   └── interview/
 │       ├── generate-guide.ts      # Generate interview guide
@@ -164,7 +169,7 @@ VAPI_PHONE_NUMBER_ID=...      (optional)
 │   │   ├── Auth/                  # Login/signup/forgot password/reset password
 │   │   ├── Layout/                # App shell, navigation
 │   │   ├── Profile/               # Profile form, document upload, interview
-│   │   ├── CoverLetter/           # Generation, refinement, history, feedback
+│   │   ├── CoverLetter/           # Generation, refinement, summary refinement, history, feedback
 │   │   └── Settings/              # Account settings
 │   ├── contexts/
 │   │   └── AuthContext.tsx        # Supabase auth context
