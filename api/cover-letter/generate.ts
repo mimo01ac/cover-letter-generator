@@ -98,11 +98,13 @@ You have access to multiple data sources in the <candidate_profile>. Use them in
 2.  **<professional_summary>:** Use this to understand their core value proposition and branding.
 3.  **<resume> & <supporting_experience>:** Use these for dates, hard skills, and factual verification.
 
-### VERIFIED FACT INVENTORY (MANDATORY REFERENCE)
-The <fact_inventory> section contains pre-extracted, verified facts from the candidate's documents. This is your AUTHORITATIVE source for what claims you can make.
+### VERIFIED FACT INVENTORY (PRIMARY REFERENCE)
+The <fact_inventory> section contains pre-extracted, verified facts from the candidate's documents. When populated, this is your PRIMARY source for what claims you can make.
+
+**If the fact inventory is empty or sparse:** Extract facts directly from the <resume>, <interview_transcripts>, and <supporting_experience> sections. Apply the same strict verification rules - only claim what is explicitly stated or clearly demonstrated in those documents.
 
 ### STRICT CLAIM RULES (CRITICAL - MUST FOLLOW)
-1. **Every skill claim MUST exist in <fact_inventory>** - Do not claim skills not listed there
+1. **Every skill claim MUST be verifiable** - Use <fact_inventory> if populated, otherwise extract directly from the candidate documents (<resume>, <interview_transcripts>, <supporting_experience>). Never invent skills.
 2. **If a job requirement has NO matching fact:**
    - Acknowledge honestly by focusing on related skills that ARE in inventory, OR
    - Reference a transferable skill that IS in inventory with honest framing
@@ -135,23 +137,38 @@ RIGHT: "My containerization experience with Docker, demonstrated through buildin
 
 2.  **ANTI-ROBOTIC TONE:**
     * Do NOT use clichéd AI openers like "I am writing to express my interest..." or "I was thrilled to learn..."
-    * BANNED WORDS: "Delve," "tapestry," "testament," "unwavering," "dynamic landscape," "synergy," "cutting-edge" (unless in a technical context).
+    * BANNED WORDS/PHRASES: "Delve," "tapestry," "testament," "unwavering," "dynamic landscape," "synergy," "cutting-edge" (unless technical).
     * Write in a confident, professional, but conversational human voice.
 
-3.  **THE "SHOW, DON'T TELL" STRATEGY:**
+3.  **NO SALESY OR PRESUMPTUOUS LANGUAGE:**
+    * NEVER use phrases like: "your search ends here," "I'm the right profile," "look no further," "I'm your ideal candidate," "perfect fit," "exactly what you're looking for."
+    * Avoid self-congratulatory claims - let achievements speak for themselves.
+    * Be confident but humble. Express genuine interest, not entitlement.
+    * WRONG: "I am precisely the leader you need to transform your revenue operations."
+    * RIGHT: "My experience scaling revenue operations at [Company] aligns well with this role's challenges."
+
+4.  **NATURAL LANGUAGE - DON'T PARROT THE JOB DESCRIPTION:**
+    * Do NOT copy phrases directly from the job posting. Paraphrase requirements naturally.
+    * Reference job requirements conversationally, as if you understood them, not as if you're checking boxes.
+    * WRONG: "You are seeking someone who can 'drive cross-functional alignment and optimize go-to-market efficiency.' I have done exactly that."
+    * RIGHT: "Bringing different teams together around shared revenue goals has been central to my work—at [Company], this meant..."
+    * The letter should feel like a genuine response, not a keyword-matching exercise.
+
+5.  **THE "SHOW, DON'T TELL" STRATEGY:**
     * Instead of listing adjectives ("I am a strategic leader"), tell a micro-story from the <interview_transcripts> or <experience_docs> that *proves* it.
     * Quantify results ONLY when exact numbers are available in the fact inventory.
 
 ### WRITING STRUCTURE
-1.  **The Hook:** A strong, direct opening connecting the candidate's specific background to the company's immediate challenges.
-2.  **The Evidence (Body):** 2-3 paragraphs mapping the candidate's *proven* achievements (from fact inventory) to the requirements in the <job_description>.
-3.  **The Close:** A confident call to action (e.g., requesting an interview).
+1.  **The Hook:** A strong, direct opening connecting the candidate's specific background to the company's challenges. Avoid grandiose claims.
+2.  **The Evidence (Body):** 2-3 paragraphs mapping the candidate's *proven* achievements to the role's needs. Reference job requirements naturally, not verbatim.
+3.  **The Close:** A professional, straightforward close expressing interest in discussing further. Avoid presumptuous lines like "I look forward to joining your team" or "I know I'm the right choice."
 
 ### FINAL CHECKS
 * Return *only* the body of the letter.
 * Ensure the tone matches the seniority implied in the <professional_summary>.
 * If the user provided specific requests in <user_instructions>, those override standard style guidelines.
-* VERIFY: Every skill/achievement claim traces back to the fact inventory.`;
+* VERIFY: Every skill/achievement claim traces back to the fact inventory OR the source documents.
+* NEVER explain that the fact inventory is empty or discuss the data format - just write the cover letter using whatever candidate information is available.`;
 
 // Helper functions for fact extraction (inlined)
 function createEmptyInventory(): CandidateFactInventory {
@@ -253,6 +270,18 @@ async function extractFacts(
   // Build document content for extraction
   let documentContent = '';
 
+  console.log('extractFacts called with:', {
+    profileName: profile?.name,
+    profileSummaryLength: profile?.summary?.length || 0,
+    documentsCount: documents?.length || 0,
+    documentDetails: documents?.map(d => ({
+      name: d?.name,
+      type: d?.type,
+      contentLength: d?.content?.length || 0,
+      hasContent: !!d?.content?.trim(),
+    })),
+  });
+
   if (profile?.summary?.trim()) {
     documentContent += `--- Professional Summary ---\n${profile.summary}\n\n`;
   }
@@ -263,6 +292,8 @@ async function extractFacts(
     }
   }
 
+  console.log('Document content built, total length:', documentContent.length);
+
   // Return empty inventory if no content to extract from
   if (!documentContent.trim()) {
     console.log('No document content to extract facts from');
@@ -272,6 +303,8 @@ async function extractFacts(
   const anthropic = new Anthropic({
     apiKey: anthropicKey,
   });
+
+  console.log('Calling Haiku for fact extraction...');
 
   const response = await anthropic.messages.create({
     model: 'claude-3-5-haiku-20241022',
@@ -286,12 +319,16 @@ async function extractFacts(
     system: EXTRACTION_PROMPT,
   });
 
+  console.log('Haiku response received, content blocks:', response.content.length);
+
   // Extract text content from response
   const textContent = response.content.find((block) => block.type === 'text');
   if (!textContent || textContent.type !== 'text') {
     console.error('No text content in extraction response');
     return createEmptyInventory();
   }
+
+  console.log('Extraction response length:', textContent.text.length);
 
   try {
     // Parse JSON from response, handling potential markdown code blocks
@@ -309,12 +346,19 @@ async function extractFacts(
     jsonText = jsonText.trim();
 
     const parsed = JSON.parse(jsonText);
+    const sanitized = sanitizeInventory(parsed);
 
-    // Validate and sanitize the parsed data
-    return sanitizeInventory(parsed);
+    console.log('Extraction parsed successfully:', {
+      skills: sanitized.skills.length,
+      achievements: sanitized.achievements.length,
+      credentials: sanitized.credentials.length,
+      companies: sanitized.companies.length,
+    });
+
+    return sanitized;
   } catch (error) {
     console.error('Failed to parse extraction response:', error);
-    console.error('Raw response:', textContent.text);
+    console.error('Raw response:', textContent.text.substring(0, 500));
     return createEmptyInventory();
   }
 }
@@ -455,11 +499,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Extract verified facts from candidate documents using Haiku (fast, cheap)
     // Wrapped in try-catch to fail gracefully if extraction fails
     let factInventory: CandidateFactInventory = createEmptyInventory();
+    let extractionDebug = {
+      documentsReceived: documents?.length || 0,
+      documentsWithContent: documents?.filter(d => d?.content?.trim()).length || 0,
+      profileHasSummary: !!profile?.summary?.trim(),
+    };
 
     try {
+      console.log('Fact extraction debug:', extractionDebug);
       factInventory = await extractFacts(profile, documents, anthropicKey);
+      console.log('Fact extraction succeeded:', {
+        skills: factInventory.skills.length,
+        achievements: factInventory.achievements.length,
+        credentials: factInventory.credentials.length,
+        companies: factInventory.companies.length,
+      });
     } catch (extractError) {
-      console.error('Fact extraction failed, continuing without inventory:', extractError);
+      console.error('Fact extraction failed:', extractError);
+      console.error('Extraction debug info:', extractionDebug);
       // Continue with empty inventory - generation will still work
     }
 
