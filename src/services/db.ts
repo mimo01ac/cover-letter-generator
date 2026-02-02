@@ -54,9 +54,13 @@ export async function getProfile(id: string): Promise<Profile | undefined> {
 }
 
 export async function getAllProfiles(): Promise<Profile[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -168,6 +172,7 @@ export async function saveCoverLetter(coverLetter: Omit<CoverLetter, 'id' | 'cre
       company_name: coverLetter.companyName || '',
       job_description: coverLetter.jobDescription,
       content: coverLetter.content,
+      executive_summary: coverLetter.executiveSummary || null,
     })
     .select('id')
     .single();
@@ -192,6 +197,7 @@ export async function getCoverLettersByProfile(profileId: string): Promise<Cover
     companyName: row.company_name,
     jobDescription: row.job_description,
     content: row.content,
+    executiveSummary: row.executive_summary || undefined,
     createdAt: toDate(row.created_at),
     updatedAt: toDate(row.updated_at),
   }));
@@ -213,20 +219,23 @@ export async function getCoverLetter(id: string): Promise<CoverLetter | undefine
     companyName: data.company_name,
     jobDescription: data.job_description,
     content: data.content,
+    executiveSummary: data.executive_summary || undefined,
     createdAt: toDate(data.created_at),
     updatedAt: toDate(data.updated_at),
   };
 }
 
 export async function updateCoverLetter(id: string, updates: Partial<CoverLetter>): Promise<void> {
+  const updateData: Record<string, unknown> = {};
+  if (updates.jobTitle !== undefined) updateData.job_title = updates.jobTitle;
+  if (updates.companyName !== undefined) updateData.company_name = updates.companyName;
+  if (updates.jobDescription !== undefined) updateData.job_description = updates.jobDescription;
+  if (updates.content !== undefined) updateData.content = updates.content;
+  if (updates.executiveSummary !== undefined) updateData.executive_summary = updates.executiveSummary;
+
   const { error } = await supabase
     .from('cover_letters')
-    .update({
-      job_title: updates.jobTitle,
-      company_name: updates.companyName,
-      job_description: updates.jobDescription,
-      content: updates.content,
-    })
+    .update(updateData)
     .eq('id', id);
 
   if (error) throw error;

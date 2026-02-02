@@ -25,6 +25,7 @@ export interface CoverLetter {
   companyName: string;
   jobDescription: string;
   content: string;
+  executiveSummary?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +59,17 @@ export interface RefinementRequest {
   userRequest: string;
   profile: Profile;
   documents: Document[];
+  jobDescription: string;
+  language?: 'en' | 'da';
+}
+
+export interface SummaryRefinementRequest {
+  currentSummary: string;
+  conversationHistory: ChatMessage[];
+  userRequest: string;
+  profile: Profile;
+  documents: Document[];
+  jobTitle: string;
   jobDescription: string;
   language?: 'en' | 'da';
 }

@@ -90,6 +90,23 @@ CRITICAL RULES:
 - Include the surrounding context/proof for each skill
 - Return valid JSON only, no additional text`;
 
+const SUMMARY_SYSTEM_PROMPT = `You are an expert CV writer creating a targeted executive summary for a candidate's CV/resume.
+
+Write a concise 3-5 sentence executive summary (maximum 100 words) that:
+- Focuses on 2-3 most relevant qualifications for THIS specific role
+- Uses active voice and impactful language
+- Includes quantifiable achievements from the fact inventory when available
+- Mirrors job description terminology naturally
+- Avoids generic phrases like "results-driven professional", "dynamic leader", "passionate about"
+
+The summary should be written in first person and ready to place at the top of a CV.
+
+STRICT RULES:
+- Only claim skills/achievements from <fact_inventory> or source documents
+- No hallucinations or invented accomplishments
+- Keep it under 100 words
+- Make it specific to the target role, not generic`;
+
 const SYSTEM_PROMPT = `You are an expert Executive Career Coach and Professional Copywriter. Your goal is to write a high-impact, authentic cover letter that connects a candidate's verified experience to a specific job opening.
 
 ### DATA SOURCE HIERARCHY (CRITICAL)
@@ -540,7 +557,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const stream = await anthropic.messages.stream({
+    // Stream cover letter first
+    const coverLetterStream = await anthropic.messages.stream({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       temperature: 0.35, // Low temperature for factual accuracy, some creativity in phrasing
@@ -548,9 +566,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       messages: [{ role: 'user', content: userMessage }],
     });
 
-    for await (const event of stream) {
+    let fullCoverLetter = '';
+    for await (const event of coverLetterStream) {
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        res.write(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`);
+        fullCoverLetter += event.delta.text;
+        res.write(`data: ${JSON.stringify({ type: 'cover_letter', text: event.delta.text })}\n\n`);
+      }
+    }
+
+    // Signal cover letter complete
+    res.write(`data: ${JSON.stringify({ type: 'cover_letter_done' })}\n\n`);
+
+    // Now generate executive summary
+    const summaryUserMessage = `<job_description>
+Job Title: ${jobTitle}
+Company: ${companyName || 'Not specified'}
+
+${jobDescription}
+</job_description>
+
+<fact_inventory>
+${formatFactInventory(factInventory)}
+</fact_inventory>
+
+<candidate_profile>
+Name: ${profile.name}
+${profile.summary ? `\nProfessional Summary:\n${profile.summary}` : ''}
+</candidate_profile>
+
+Write a targeted executive summary for this candidate's CV, tailored for the ${jobTitle} role.`;
+
+    const summaryStream = await anthropic.messages.stream({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 500,
+      temperature: 0.3,
+      system: SUMMARY_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: summaryUserMessage }],
+    });
+
+    for await (const event of summaryStream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        res.write(`data: ${JSON.stringify({ type: 'summary', text: event.delta.text })}\n\n`);
       }
     }
 

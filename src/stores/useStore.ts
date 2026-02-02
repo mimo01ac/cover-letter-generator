@@ -9,9 +9,14 @@ interface AppState {
   // Documents state
   documents: Document[];
 
-  // Chat state
+  // Chat state for cover letter
   chatMessages: ChatMessage[];
   currentLetter: string;
+
+  // Summary state
+  currentSummary: string;
+  summaryChatMessages: ChatMessage[];
+  isGeneratingSummary: boolean;
 
   // Loading states
   isGenerating: boolean;
@@ -25,6 +30,12 @@ interface AppState {
   clearChat: () => void;
   setCurrentLetter: (letter: string) => void;
 
+  // Summary actions
+  setCurrentSummary: (summary: string) => void;
+  addSummaryChatMessage: (message: ChatMessage) => void;
+  clearSummaryChat: () => void;
+  setIsGeneratingSummary: (generating: boolean) => void;
+
   setIsGenerating: (generating: boolean) => void;
 
   reset: () => void;
@@ -36,6 +47,9 @@ const initialState = {
   documents: [],
   chatMessages: [],
   currentLetter: '',
+  currentSummary: '',
+  summaryChatMessages: [],
+  isGeneratingSummary: false,
   isGenerating: false,
 };
 
@@ -54,6 +68,18 @@ export const useStore = create<AppState>()((set) => ({
   clearChat: () => set({ chatMessages: [], currentLetter: '' }),
 
   setCurrentLetter: (letter) => set({ currentLetter: letter }),
+
+  // Summary actions
+  setCurrentSummary: (summary) => set({ currentSummary: summary }),
+
+  addSummaryChatMessage: (message) =>
+    set((state) => ({
+      summaryChatMessages: [...state.summaryChatMessages, message],
+    })),
+
+  clearSummaryChat: () => set({ summaryChatMessages: [], currentSummary: '' }),
+
+  setIsGeneratingSummary: (generating) => set({ isGeneratingSummary: generating }),
 
   setIsGenerating: (generating) => set({ isGenerating: generating }),
 

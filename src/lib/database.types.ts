@@ -78,6 +78,7 @@ export interface Database {
           company_name: string
           job_description: string
           content: string
+          executive_summary: string | null
           created_at: string
           updated_at: string
         }
@@ -88,6 +89,7 @@ export interface Database {
           company_name?: string
           job_description: string
           content: string
+          executive_summary?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -98,6 +100,7 @@ export interface Database {
           company_name?: string
           job_description?: string
           content?: string
+          executive_summary?: string | null
           updated_at?: string
         }
         Relationships: []

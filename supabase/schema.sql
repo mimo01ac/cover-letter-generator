@@ -39,6 +39,7 @@ CREATE TABLE cover_letters (
   company_name TEXT DEFAULT '',
   job_description TEXT NOT NULL,
   content TEXT NOT NULL,
+  executive_summary TEXT DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
