@@ -9,6 +9,7 @@ import { FeedbackAnalysis } from './FeedbackAnalysis';
 import { detectLanguage } from '../../utils/languageDetection';
 import { scrapeJobPosting } from '../../services/jobScraper';
 import { analyzeCoverLetter } from '../../services/feedbackAnalyzer';
+import { downloadCoverLetterAsWord } from '../../utils/wordExport';
 import type { Profile, CoverLetterFeedback } from '../../types';
 
 // Example data for onboarding
@@ -233,6 +234,14 @@ export function Generator() {
     a.download = `cover-letter-${companyName || 'job'}-${new Date().toISOString().split('T')[0]}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadWord = async () => {
+    try {
+      await downloadCoverLetterAsWord(generatedLetter, jobTitle, companyName);
+    } catch (err) {
+      console.error('Failed to download Word document:', err);
+    }
   };
 
   const loadExampleData = () => {
@@ -521,6 +530,15 @@ export function Generator() {
                       strokeWidth={2}
                       d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                     />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleDownloadWord}
+                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                  title="Download as Word document"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM8.5 15.5L6 11h1.5l1.5 2.75L10.5 11H12l-2.5 4.5L12 20h-1.5l-1.5-2.75L7.5 20H6l2.5-4.5z"/>
                   </svg>
                 </button>
                 <button
