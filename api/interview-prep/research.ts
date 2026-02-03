@@ -27,19 +27,23 @@ interface PerplexityResponse {
 
 // ============ SCRAPE FUNCTIONALITY ============
 
-const EXTRACTION_PROMPT = `You are extracting job posting information from HTML content. Extract the following fields:
+const EXTRACTION_PROMPT = `Extract job posting information from the provided content.
 
-1. **jobTitle**: The job title/position name
-2. **companyName**: The name of the company hiring
-3. **jobDescription**: The full job description including responsibilities, requirements, qualifications, benefits, etc. Preserve the structure with line breaks.
-4. **companyUrl**: The company's website URL if mentioned, or null if not found
+IMPORTANT: Return ONLY a valid JSON object. No explanations, no markdown, no text before or after the JSON.
 
-Return ONLY a JSON object with these exact fields. Do not include any other text or markdown formatting.
+Required JSON structure:
+{
+  "jobTitle": "The job title/position name",
+  "companyName": "The company hiring",
+  "jobDescription": "Full description with responsibilities, requirements, qualifications. Use \\n for line breaks.",
+  "companyUrl": "Company website URL or null"
+}
 
-Example output:
-{"jobTitle": "Senior Software Engineer", "companyName": "Acme Corp", "jobDescription": "We are looking for...", "companyUrl": "https://acme.com"}
-
-If you cannot find a field, use empty string for jobTitle/companyName/jobDescription, and null for companyUrl.`;
+Rules:
+- If a field is not found, use "" for strings or null for companyUrl
+- Do not include markdown formatting in jobDescription
+- Start your response with { and end with }
+- Ensure valid JSON syntax (escape quotes, newlines properly)`;
 
 const COMPANY_SEARCH_PROMPT = `Given this company name, provide the official company website URL.
 
@@ -293,6 +297,8 @@ async function handleScrape(req: VercelRequest, res: VercelResponse, url: string
     let extractedData;
     try {
       let jsonText = responseText.trim();
+
+      // Remove markdown code blocks
       if (jsonText.startsWith('```json')) {
         jsonText = jsonText.slice(7);
       } else if (jsonText.startsWith('```')) {
@@ -301,10 +307,21 @@ async function handleScrape(req: VercelRequest, res: VercelResponse, url: string
       if (jsonText.endsWith('```')) {
         jsonText = jsonText.slice(0, -3);
       }
-      extractedData = JSON.parse(jsonText.trim());
-    } catch {
+
+      // Try to find JSON object in the response
+      jsonText = jsonText.trim();
+      const jsonStart = jsonText.indexOf('{');
+      const jsonEnd = jsonText.lastIndexOf('}');
+
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        jsonText = jsonText.substring(jsonStart, jsonEnd + 1);
+      }
+
+      extractedData = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError, 'Response:', responseText.substring(0, 1000));
       return res.status(500).json({
-        error: 'Failed to parse extracted data',
+        error: 'Failed to parse extracted data. The website may have an unusual format.',
         debug: responseText.substring(0, 500)
       });
     }

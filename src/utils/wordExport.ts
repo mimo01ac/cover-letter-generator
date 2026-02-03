@@ -1,15 +1,27 @@
 import { Document, Paragraph, TextRun, HeadingLevel, Packer } from 'docx';
 import { saveAs } from 'file-saver';
+import { detectLanguage } from './languageDetection';
 
 export async function downloadCoverLetterAsWord(
   coverLetter: string,
   jobTitle: string,
   companyName?: string
 ): Promise<void> {
-  // Create the heading text
-  const headingText = companyName
-    ? `Application for ${jobTitle} at ${companyName}`
-    : `Application for ${jobTitle}`;
+  // Detect language and create appropriate heading
+  const language = detectLanguage(coverLetter);
+
+  let headingText: string;
+  if (language === 'da') {
+    // Danish
+    headingText = companyName
+      ? `Ansøgning til ${jobTitle} hos ${companyName}`
+      : `Ansøgning til ${jobTitle}`;
+  } else {
+    // English (default)
+    headingText = companyName
+      ? `Application for ${jobTitle} at ${companyName}`
+      : `Application for ${jobTitle}`;
+  }
 
   // Split cover letter into paragraphs
   const paragraphs = coverLetter

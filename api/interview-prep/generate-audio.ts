@@ -183,8 +183,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!ttsResponse.ok) {
       const errorText = await ttsResponse.text();
       console.error('ElevenLabs API error:', ttsResponse.status, errorText);
+
+      // Parse the error for a more specific message
+      let errorMessage = 'Audio generation failed';
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.detail?.message) {
+          errorMessage = errorJson.detail.message;
+        } else if (errorJson.detail) {
+          errorMessage = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
+        } else if (errorJson.message) {
+          errorMessage = errorJson.message;
+        } else if (errorJson.error) {
+          errorMessage = errorJson.error;
+        }
+      } catch {
+        // If not JSON, use the raw text if it's not too long
+        if (errorText.length < 200) {
+          errorMessage = errorText;
+        }
+      }
+
+      // Add status code context for common errors
+      if (ttsResponse.status === 401) {
+        errorMessage = 'Invalid ElevenLabs API key';
+      } else if (ttsResponse.status === 429) {
+        errorMessage = 'ElevenLabs rate limit exceeded. Please try again later.';
+      } else if (ttsResponse.status === 422) {
+        errorMessage = `Invalid request: ${errorMessage}`;
+      }
+
       return res.status(500).json({
-        error: 'Audio generation failed',
+        error: errorMessage,
         details: errorText,
       });
     }
