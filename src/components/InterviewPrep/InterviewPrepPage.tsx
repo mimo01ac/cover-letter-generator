@@ -322,49 +322,47 @@ export function InterviewPrepPage() {
                 {/* URL Scraper */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Paste Job Posting URL
+                    Import from URL
                   </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    Auto-fill job details from a public job posting URL
-                  </p>
-                  <div className="flex gap-2">
+                  <div className="space-y-2">
                     <input
                       type="url"
                       value={jobUrl}
                       onChange={(e) => setJobUrl(e.target.value)}
-                      placeholder="https://example.com/job-posting"
+                      placeholder="Paste job posting URL..."
                       disabled={isScraping}
-                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
                     />
                     <button
                       onClick={handleScrapeUrl}
                       disabled={isScraping || !jobUrl.trim()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
                     >
                       {isScraping ? (
-                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
+                        <>
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Importing...
+                        </>
                       ) : (
                         <>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                           </svg>
-                          Import
+                          Import Job Details
                         </>
                       )}
                     </button>
                   </div>
                 </div>
 
-                {/* Job Selector */}
-                <div>
-                  <JobSelector
-                    previousJobs={previousJobs}
-                    onJobSelect={handleJobSelect}
-                  />
-                </div>
+                {/* Job Selector - only shows if there are previous jobs */}
+                <JobSelector
+                  previousJobs={previousJobs}
+                  onJobSelect={handleJobSelect}
+                />
 
                 {/* Company URL */}
                 <div>

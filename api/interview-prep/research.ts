@@ -41,11 +41,16 @@ Example output:
 
 If you cannot find a field, use empty string for jobTitle/companyName/jobDescription, and null for companyUrl.`;
 
-const COMPANY_SEARCH_PROMPT = `Given this company name, provide the most likely official company website URL.
+const COMPANY_SEARCH_PROMPT = `Given this company name, provide the official company website URL.
 
 Company: {companyName}
 
-Return ONLY the URL (e.g., "https://company.com") or "null" if you cannot determine it with confidence. Do not include any other text.`;
+Instructions:
+- Return the main corporate website URL (not careers page, not LinkedIn, not Wikipedia)
+- Use common patterns: company.com, company.dk, company.co.uk, etc.
+- For well-known companies, use your knowledge of their official domain
+- Return ONLY the URL (e.g., "https://company.com") or "null" if truly unknown
+- Do not include any explanation, just the URL`;
 
 // Special handler for Workday job postings (JavaScript-heavy sites)
 interface WorkdayJobData {
@@ -57,15 +62,16 @@ interface WorkdayJobData {
 
 async function fetchWorkdayJob(url: string): Promise<WorkdayJobData | null> {
   // Parse Workday URL pattern: https://{company}.wd3.myworkdayjobs.com/{locale}/{site}/job/{location}/{title}_{id}
-  const workdayPattern = /https?:\/\/([^.]+)\.wd\d*\.myworkdayjobs\.com\/([^/]+)\/([^/]+)\/job\/(.+)/;
+  // Also handle: https://{company}.wd{N}.myworkdayjobs.com/...
+  const workdayPattern = /https?:\/\/([^.]+)\.(wd\d*)\.myworkdayjobs\.com\/([^/]+)\/([^/]+)\/job\/(.+)/;
   const match = url.match(workdayPattern);
 
   if (!match) return null;
 
-  const [, company, locale, site, jobPath] = match;
+  const [, company, wdVersion, locale, site, jobPath] = match;
 
   // Workday API endpoint
-  const apiUrl = `https://${company}.wd3.myworkdayjobs.com/wday/cxs/${company}/${site}/job/${jobPath}`;
+  const apiUrl = `https://${company}.${wdVersion}.myworkdayjobs.com/wday/cxs/${company}/${site}/job/${jobPath}`;
 
   try {
     const response = await fetch(apiUrl, {
@@ -82,14 +88,13 @@ async function fetchWorkdayJob(url: string): Promise<WorkdayJobData | null> {
 
     const data = await response.json();
 
-    // Extract job data from Workday response
+    // Extract job data from Workday response - try multiple possible structures
     const jobPosting = data.jobPostingInfo || data;
 
     // Build description from various fields
     const descriptionParts: string[] = [];
 
     if (jobPosting.jobDescription) {
-      // Workday returns HTML, clean it
       descriptionParts.push(jobPosting.jobDescription.replace(/<[^>]+>/g, '\n').replace(/\n{3,}/g, '\n\n').trim());
     }
 
@@ -101,7 +106,7 @@ async function fetchWorkdayJob(url: string): Promise<WorkdayJobData | null> {
       descriptionParts.push('\n\nResponsibilities:\n' + jobPosting.responsibilities.replace(/<[^>]+>/g, '\n').trim());
     }
 
-    // Try to get additional details
+    // Try to get additional details from various Workday response structures
     if (data.jobRequisition) {
       if (data.jobRequisition.bulletFields) {
         for (const field of data.jobRequisition.bulletFields) {
@@ -112,11 +117,34 @@ async function fetchWorkdayJob(url: string): Promise<WorkdayJobData | null> {
       }
     }
 
+    // Extract company name from multiple possible fields
+    let companyName =
+      jobPosting.company ||
+      jobPosting.companyName ||
+      jobPosting.hiringOrganization?.name ||
+      data.company?.descriptor ||
+      data.hiringOrganization?.name ||
+      '';
+
+    // If no company name found, use the subdomain but formatted better
+    if (!companyName && company) {
+      // Convert subdomain to readable name (e.g., "if" -> "IF")
+      companyName = company.toUpperCase();
+    }
+
+    // Extract company URL from multiple possible fields
+    let companyUrl =
+      jobPosting.companyUrl ||
+      jobPosting.hiringOrganization?.url ||
+      data.company?.url ||
+      data.hiringOrganization?.sameAs ||
+      null;
+
     return {
       jobTitle: jobPosting.title || jobPosting.jobTitle || '',
-      companyName: jobPosting.company || company.toUpperCase() || '',
+      companyName,
       jobDescription: descriptionParts.join('\n').trim(),
-      companyUrl: jobPosting.companyUrl || null,
+      companyUrl,
     };
   } catch (error) {
     console.error('Workday fetch error:', error);
