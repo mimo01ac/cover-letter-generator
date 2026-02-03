@@ -47,6 +47,83 @@ Company: {companyName}
 
 Return ONLY the URL (e.g., "https://company.com") or "null" if you cannot determine it with confidence. Do not include any other text.`;
 
+// Special handler for Workday job postings (JavaScript-heavy sites)
+interface WorkdayJobData {
+  jobTitle: string;
+  companyName: string;
+  jobDescription: string;
+  companyUrl: string | null;
+}
+
+async function fetchWorkdayJob(url: string): Promise<WorkdayJobData | null> {
+  // Parse Workday URL pattern: https://{company}.wd3.myworkdayjobs.com/{locale}/{site}/job/{location}/{title}_{id}
+  const workdayPattern = /https?:\/\/([^.]+)\.wd\d*\.myworkdayjobs\.com\/([^/]+)\/([^/]+)\/job\/(.+)/;
+  const match = url.match(workdayPattern);
+
+  if (!match) return null;
+
+  const [, company, locale, site, jobPath] = match;
+
+  // Workday API endpoint
+  const apiUrl = `https://${company}.wd3.myworkdayjobs.com/wday/cxs/${company}/${site}/job/${jobPath}`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error('Workday API failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+
+    // Extract job data from Workday response
+    const jobPosting = data.jobPostingInfo || data;
+
+    // Build description from various fields
+    const descriptionParts: string[] = [];
+
+    if (jobPosting.jobDescription) {
+      // Workday returns HTML, clean it
+      descriptionParts.push(jobPosting.jobDescription.replace(/<[^>]+>/g, '\n').replace(/\n{3,}/g, '\n\n').trim());
+    }
+
+    if (jobPosting.qualifications) {
+      descriptionParts.push('\n\nQualifications:\n' + jobPosting.qualifications.replace(/<[^>]+>/g, '\n').trim());
+    }
+
+    if (jobPosting.responsibilities) {
+      descriptionParts.push('\n\nResponsibilities:\n' + jobPosting.responsibilities.replace(/<[^>]+>/g, '\n').trim());
+    }
+
+    // Try to get additional details
+    if (data.jobRequisition) {
+      if (data.jobRequisition.bulletFields) {
+        for (const field of data.jobRequisition.bulletFields) {
+          if (field.value) {
+            descriptionParts.push(`\n${field.label || 'Details'}: ${field.value}`);
+          }
+        }
+      }
+    }
+
+    return {
+      jobTitle: jobPosting.title || jobPosting.jobTitle || '',
+      companyName: jobPosting.company || company.toUpperCase() || '',
+      jobDescription: descriptionParts.join('\n').trim(),
+      companyUrl: jobPosting.companyUrl || null,
+    };
+  } catch (error) {
+    console.error('Workday fetch error:', error);
+    return null;
+  }
+}
+
 async function fetchWithRetry(url: string, retries = 2): Promise<string> {
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -126,6 +203,40 @@ async function handleScrape(req: VercelRequest, res: VercelResponse, url: string
   }
 
   try {
+    // Check for Workday URLs first (they require special handling)
+    if (url.includes('.myworkdayjobs.com')) {
+      const workdayData = await fetchWorkdayJob(url);
+      if (workdayData && (workdayData.jobTitle || workdayData.jobDescription)) {
+        // Use Claude to find company URL if not provided
+        if (!workdayData.companyUrl && workdayData.companyName) {
+          const anthropic = new Anthropic({ apiKey: anthropicKey });
+          try {
+            const searchResponse = await anthropic.messages.create({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 100,
+              temperature: 0,
+              messages: [{
+                role: 'user',
+                content: `Given this company name, provide the most likely official company website URL.\n\nCompany: ${workdayData.companyName}\n\nReturn ONLY the URL (e.g., "https://company.com") or "null" if you cannot determine it with confidence. Do not include any other text.`,
+              }],
+            });
+
+            const urlResponse = searchResponse.content[0].type === 'text'
+              ? searchResponse.content[0].text.trim()
+              : '';
+
+            if (urlResponse && urlResponse !== 'null' && urlResponse.startsWith('http')) {
+              workdayData.companyUrl = urlResponse;
+            }
+          } catch (error) {
+            console.error('Company URL search failed:', error);
+          }
+        }
+
+        return res.status(200).json(workdayData);
+      }
+    }
+
     const html = await fetchWithRetry(url);
     const textContent = extractTextContent(html);
 
