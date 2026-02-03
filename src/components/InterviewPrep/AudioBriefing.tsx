@@ -4,10 +4,11 @@ import { generateAudio } from '../../services/interviewPrep';
 interface AudioBriefingProps {
   podcastScript: string;
   briefingId: string | null;
+  savedAudioUrl?: string;
 }
 
-export function AudioBriefing({ podcastScript, briefingId }: AudioBriefingProps) {
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+export function AudioBriefing({ podcastScript, briefingId, savedAudioUrl }: AudioBriefingProps) {
+  const [audioUrl, setAudioUrl] = useState<string | null>(savedAudioUrl || null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -17,13 +18,13 @@ export function AudioBriefing({ podcastScript, briefingId }: AudioBriefingProps)
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    // Reset state when script changes
-    setAudioUrl(null);
+    // Load saved audio URL or reset when briefing changes
+    setAudioUrl(savedAudioUrl || null);
     setError(null);
     setIsPlaying(false);
     setProgress(0);
     setDuration(0);
-  }, [podcastScript]);
+  }, [briefingId, savedAudioUrl]);
 
   const handleGenerateAudio = async () => {
     if (!briefingId || !podcastScript) return;

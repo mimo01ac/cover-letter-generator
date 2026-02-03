@@ -43,6 +43,7 @@ export function InterviewPrepPage() {
   const [interviewQuestions, setInterviewQuestions] = useState<InterviewQuestion[]>([]);
   const [talkingPoints, setTalkingPoints] = useState<TalkingPoint[]>([]);
   const [podcastScript, setPodcastScript] = useState('');
+  const [audioUrl, setAudioUrl] = useState<string | undefined>(undefined);
 
   // UI state
   const [activeTab, setActiveTab] = useState<ActiveTab>('briefing');
@@ -150,6 +151,7 @@ export function InterviewPrepPage() {
     setInterviewQuestions([]);
     setTalkingPoints([]);
     setPodcastScript('');
+    setAudioUrl(undefined);
     setBriefingId(null);
 
     const callbacks: GenerationCallbacks = {
@@ -207,6 +209,7 @@ export function InterviewPrepPage() {
     interviewQuestions?: InterviewQuestion[];
     talkingPoints?: TalkingPoint[];
     podcastScript?: string;
+    audioUrl?: string;
     jobTitle: string;
     companyName: string;
     jobDescription: string;
@@ -217,6 +220,7 @@ export function InterviewPrepPage() {
     setInterviewQuestions(briefing.interviewQuestions || []);
     setTalkingPoints(briefing.talkingPoints || []);
     setPodcastScript(briefing.podcastScript || '');
+    setAudioUrl(briefing.audioUrl);
     setJobTitle(briefing.jobTitle);
     setCompanyName(briefing.companyName);
     setJobDescription(briefing.jobDescription);
@@ -516,6 +520,7 @@ export function InterviewPrepPage() {
                   <AudioBriefing
                     podcastScript={podcastScript}
                     briefingId={briefingId}
+                    savedAudioUrl={audioUrl}
                   />
                 )}
               </div>

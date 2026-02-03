@@ -15,6 +15,43 @@ interface ElevenLabsVoice {
 const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // "Sarah" - warm, professional female voice
 const FALLBACK_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'; // "Adam" - professional male voice
 
+// Clean podcast script for TTS - remove structural elements that shouldn't be spoken
+function cleanScriptForTTS(script: string): string {
+  return script
+    // Remove markdown headers (## Section, ### Subsection)
+    .replace(/^#{1,6}\s+.+$/gm, '')
+    // Remove bold/italic markers but keep the text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    // Remove time markers like (5 min), [3 minutes], (1-2 min), etc.
+    .replace(/\(?\[?\d+[-–]?\d*\s*(?:min(?:ute)?s?|sec(?:ond)?s?)\]?\)?/gi, '')
+    // Remove section labels with timing like "Opening (1 min)"
+    .replace(/^.{0,30}\(\d+\s*min(?:ute)?s?\)\s*[-–:]?\s*/gm, '')
+    // Remove stage directions in parentheses like (pause), (emphasis), (slowly)
+    .replace(/\((?:pause|beat|slowly|emphasis|softer|louder|whisper|excited)\)/gi, '')
+    // Remove ellipsis used as pause indicators (but keep sentence-ending ones)
+    .replace(/\s*\.\.\.\s*/g, '. ')
+    // Remove bullet points and list markers
+    .replace(/^[\s]*[-•*]\s*/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    // Remove section dividers
+    .replace(/^[-=]{3,}$/gm, '')
+    // Remove "Section X:" or "Part X:" labels
+    .replace(/^(?:Section|Part|Chapter)\s*\d*\s*[:–-]\s*/gim, '')
+    // Clean up multiple newlines
+    .replace(/\n{3,}/g, '\n\n')
+    // Clean up multiple spaces
+    .replace(/\s{2,}/g, ' ')
+    // Trim each line
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .join('\n\n')
+    .trim();
+}
+
 async function getAvailableVoice(apiKey: string): Promise<string> {
   try {
     const response = await fetch('https://api.elevenlabs.io/v1/voices', {
@@ -116,6 +153,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get a suitable voice
     const voiceId = await getAvailableVoice(elevenLabsKey);
 
+    // Clean the script for TTS (remove structural elements)
+    const cleanedText = cleanScriptForTTS(text);
+    console.log(`Original text length: ${text.length}, Cleaned text length: ${cleanedText.length}`);
+
     // Call ElevenLabs TTS API
     const ttsResponse = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
@@ -127,7 +168,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'xi-api-key': elevenLabsKey,
         },
         body: JSON.stringify({
-          text: text.substring(0, 5000), // ElevenLabs has a character limit per request
+          text: cleanedText.substring(0, 5000), // ElevenLabs has a character limit per request
           model_id: 'eleven_multilingual_v2',
           voice_settings: {
             stability: 0.5,
@@ -162,7 +203,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Return the audio data
     return res.status(200).json({
       audioUrl: audioDataUrl,
-      duration: Math.ceil(text.length / 15), // Rough estimate: ~15 chars per second
+      duration: Math.ceil(cleanedText.length / 15), // Rough estimate: ~15 chars per second
     });
   } catch (error) {
     console.error('Generate audio API error:', error);

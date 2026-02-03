@@ -10,6 +10,7 @@ interface BriefingHistoryProps {
     interviewQuestions?: InterviewQuestion[];
     talkingPoints?: TalkingPoint[];
     podcastScript?: string;
+    audioUrl?: string;
     jobTitle: string;
     companyName: string;
     jobDescription: string;
@@ -133,6 +134,7 @@ export function BriefingHistory({ profileId, onLoadBriefing, currentBriefingId }
                         interviewQuestions: briefing.interviewQuestions,
                         talkingPoints: briefing.talkingPoints,
                         podcastScript: briefing.podcastScript,
+                        audioUrl: briefing.audioUrl,
                         jobTitle: briefing.jobTitle,
                         companyName: briefing.companyName,
                         jobDescription: briefing.jobDescription,
