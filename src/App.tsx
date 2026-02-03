@@ -6,6 +6,7 @@ import { HistoryPage } from './components/CoverLetter';
 import { ProfilePage } from './components/Profile';
 import { SettingsPage } from './components/Settings';
 import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
+import { InterviewPrepPage } from './components/InterviewPrep';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<AppLayout />}>
             <Route path="/" element={<Generator />} />
+            <Route path="/interview-prep" element={<InterviewPrepPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />

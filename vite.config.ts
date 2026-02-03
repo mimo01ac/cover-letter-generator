@@ -8,4 +8,8 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['pdfjs-dist'],
   },
+  server: {
+    port: parseInt(process.env.PORT || '5173'),
+    strictPort: true,
+  },
 })

@@ -147,3 +147,106 @@ export interface CandidateFactInventory {
   credentials: ExtractedCredential[];
   companies: string[];
 }
+
+// Interview Prep Types
+export type InterviewBriefingStatus = 'researching' | 'generating' | 'ready' | 'failed';
+
+export interface CompanyResearch {
+  mission?: string;
+  values?: string[];
+  culture?: string;
+  strategy?: string;
+  recentNews?: string[];
+  keyPeople?: Array<{ name: string; title: string }>;
+  fundingStage?: string;
+  employeeCount?: string;
+  founded?: string;
+  headquarters?: string;
+}
+
+export interface IndustryAnalysis {
+  trends?: string[];
+  challenges?: string[];
+  regulations?: string[];
+  outlook?: string;
+  keyMetrics?: string[];
+}
+
+export interface CompetitiveLandscape {
+  competitors?: Array<{
+    name: string;
+    description?: string;
+    differentiation?: string;
+  }>;
+  marketPosition?: string;
+  competitiveAdvantages?: string[];
+}
+
+export interface InterviewQuestion {
+  category: 'behavioral' | 'technical' | 'situational' | 'company-specific' | 'role-specific';
+  question: string;
+  suggestedAnswer: string;
+  tips?: string;
+}
+
+export interface TalkingPoint {
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  relevantFor: string[];
+}
+
+export interface InterviewBriefing {
+  id?: string;
+  profileId: string;
+
+  // Input data
+  jobTitle: string;
+  companyName: string;
+  jobDescription: string;
+  companyUrl?: string;
+
+  // Research data
+  companyResearch?: CompanyResearch;
+  industryAnalysis?: IndustryAnalysis;
+  competitiveLandscape?: CompetitiveLandscape;
+
+  // Generated content
+  briefingDocument?: string;
+  interviewQuestions?: InterviewQuestion[];
+  talkingPoints?: TalkingPoint[];
+  podcastScript?: string;
+
+  // Audio
+  audioUrl?: string;
+
+  // Metadata
+  status: InterviewBriefingStatus;
+  error?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InterviewPrepGenerationRequest {
+  profileId: string;
+  jobTitle: string;
+  companyName: string;
+  jobDescription: string;
+  companyUrl?: string;
+}
+
+export interface InterviewPrepRefinementRequest {
+  briefingId: string;
+  section: 'briefing' | 'questions' | 'talking_points' | 'podcast';
+  userRequest: string;
+  conversationHistory: ChatMessage[];
+}
+
+// Job from previous cover letters (for reuse)
+export interface PreviousJob {
+  jobTitle: string;
+  companyName: string;
+  jobDescription: string;
+  createdAt: Date;
+}

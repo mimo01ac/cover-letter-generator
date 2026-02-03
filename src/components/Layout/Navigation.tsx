@@ -32,6 +32,9 @@ export function Navigation() {
             <NavLink to="/history" className={linkClass}>
               My Letters
             </NavLink>
+            <NavLink to="/interview-prep" className={linkClass}>
+              Interview Prep
+            </NavLink>
             <NavLink to="/settings" className={linkClass}>
               Settings
             </NavLink>

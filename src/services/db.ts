@@ -1,6 +1,19 @@
 import { supabase } from '../lib/supabase';
 import type { Json } from '../lib/database.types';
-import type { Profile, Document, CoverLetter, InterviewResult, CachedInterviewGuide } from '../types';
+import type {
+  Profile,
+  Document,
+  CoverLetter,
+  InterviewResult,
+  CachedInterviewGuide,
+  InterviewBriefing,
+  PreviousJob,
+  CompanyResearch,
+  IndustryAnalysis,
+  CompetitiveLandscape,
+  InterviewQuestion,
+  TalkingPoint
+} from '../types';
 
 // Helper to convert database rows to app types
 function toDate(dateString: string | null): Date {
@@ -430,4 +443,166 @@ export async function deleteInterviewGuideByProfile(profileId: string): Promise<
     .eq('profile_id', profileId);
 
   if (error) throw error;
+}
+
+// Interview Briefing operations
+// Note: Using type assertions because interview_briefings table types need to be regenerated after migration
+export async function saveInterviewBriefing(
+  briefing: Omit<InterviewBriefing, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const { data, error } = await (supabase
+    .from('interview_briefings' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .insert({
+      profile_id: briefing.profileId,
+      job_title: briefing.jobTitle,
+      company_name: briefing.companyName,
+      job_description: briefing.jobDescription,
+      company_url: briefing.companyUrl || null,
+      company_research: briefing.companyResearch as unknown as Json || null,
+      industry_analysis: briefing.industryAnalysis as unknown as Json || null,
+      competitive_landscape: briefing.competitiveLandscape as unknown as Json || null,
+      briefing_document: briefing.briefingDocument || null,
+      interview_questions: briefing.interviewQuestions as unknown as Json || null,
+      talking_points: briefing.talkingPoints as unknown as Json || null,
+      podcast_script: briefing.podcastScript || null,
+      audio_url: briefing.audioUrl || null,
+      status: briefing.status,
+      error: briefing.error || null,
+    } as Record<string, unknown>)
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return (data as { id: string }).id;
+}
+
+export async function getInterviewBriefing(id: string): Promise<InterviewBriefing | undefined> {
+  const { data, error } = await (supabase
+    .from('interview_briefings' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) return undefined;
+
+  const row = data as Record<string, unknown>;
+  return {
+    id: row.id as string,
+    profileId: row.profile_id as string,
+    jobTitle: row.job_title as string,
+    companyName: row.company_name as string,
+    jobDescription: row.job_description as string,
+    companyUrl: (row.company_url as string) || undefined,
+    companyResearch: row.company_research as CompanyResearch | undefined,
+    industryAnalysis: row.industry_analysis as IndustryAnalysis | undefined,
+    competitiveLandscape: row.competitive_landscape as CompetitiveLandscape | undefined,
+    briefingDocument: (row.briefing_document as string) || undefined,
+    interviewQuestions: row.interview_questions as InterviewQuestion[] | undefined,
+    talkingPoints: row.talking_points as TalkingPoint[] | undefined,
+    podcastScript: (row.podcast_script as string) || undefined,
+    audioUrl: (row.audio_url as string) || undefined,
+    status: row.status as InterviewBriefing['status'],
+    error: (row.error as string) || undefined,
+    createdAt: toDate(row.created_at as string),
+    updatedAt: toDate(row.updated_at as string),
+  };
+}
+
+export async function getInterviewBriefingsByProfile(profileId: string): Promise<InterviewBriefing[]> {
+  const { data, error } = await (supabase
+    .from('interview_briefings' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .select('*')
+    .eq('profile_id', profileId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return ((data || []) as Record<string, unknown>[]).map((row) => ({
+    id: row.id as string,
+    profileId: row.profile_id as string,
+    jobTitle: row.job_title as string,
+    companyName: row.company_name as string,
+    jobDescription: row.job_description as string,
+    companyUrl: (row.company_url as string) || undefined,
+    companyResearch: row.company_research as CompanyResearch | undefined,
+    industryAnalysis: row.industry_analysis as IndustryAnalysis | undefined,
+    competitiveLandscape: row.competitive_landscape as CompetitiveLandscape | undefined,
+    briefingDocument: (row.briefing_document as string) || undefined,
+    interviewQuestions: row.interview_questions as InterviewQuestion[] | undefined,
+    talkingPoints: row.talking_points as TalkingPoint[] | undefined,
+    podcastScript: (row.podcast_script as string) || undefined,
+    audioUrl: (row.audio_url as string) || undefined,
+    status: row.status as InterviewBriefing['status'],
+    error: (row.error as string) || undefined,
+    createdAt: toDate(row.created_at as string),
+    updatedAt: toDate(row.updated_at as string),
+  }));
+}
+
+export async function updateInterviewBriefing(
+  id: string,
+  updates: Partial<InterviewBriefing>
+): Promise<void> {
+  const updateData: Record<string, unknown> = {};
+
+  if (updates.jobTitle !== undefined) updateData.job_title = updates.jobTitle;
+  if (updates.companyName !== undefined) updateData.company_name = updates.companyName;
+  if (updates.jobDescription !== undefined) updateData.job_description = updates.jobDescription;
+  if (updates.companyUrl !== undefined) updateData.company_url = updates.companyUrl;
+  if (updates.companyResearch !== undefined) updateData.company_research = updates.companyResearch;
+  if (updates.industryAnalysis !== undefined) updateData.industry_analysis = updates.industryAnalysis;
+  if (updates.competitiveLandscape !== undefined) updateData.competitive_landscape = updates.competitiveLandscape;
+  if (updates.briefingDocument !== undefined) updateData.briefing_document = updates.briefingDocument;
+  if (updates.interviewQuestions !== undefined) updateData.interview_questions = updates.interviewQuestions;
+  if (updates.talkingPoints !== undefined) updateData.talking_points = updates.talkingPoints;
+  if (updates.podcastScript !== undefined) updateData.podcast_script = updates.podcastScript;
+  if (updates.audioUrl !== undefined) updateData.audio_url = updates.audioUrl;
+  if (updates.status !== undefined) updateData.status = updates.status;
+  if (updates.error !== undefined) updateData.error = updates.error;
+
+  const { error } = await (supabase
+    .from('interview_briefings' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .update(updateData)
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function deleteInterviewBriefing(id: string): Promise<void> {
+  const { error } = await (supabase
+    .from('interview_briefings' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+// Get unique jobs from cover letters for reuse in interview prep
+export async function getPreviousJobs(profileId: string): Promise<PreviousJob[]> {
+  const { data, error } = await supabase
+    .from('cover_letters')
+    .select('job_title, company_name, job_description, created_at')
+    .eq('profile_id', profileId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Deduplicate by job_title + company_name combination
+  const seen = new Set<string>();
+  const uniqueJobs: PreviousJob[] = [];
+
+  for (const row of data || []) {
+    const key = `${row.job_title}|${row.company_name}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueJobs.push({
+        jobTitle: row.job_title,
+        companyName: row.company_name,
+        jobDescription: row.job_description,
+        createdAt: toDate(row.created_at),
+      });
+    }
+  }
+
+  return uniqueJobs;
 }
