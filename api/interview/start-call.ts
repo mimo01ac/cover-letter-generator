@@ -73,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name: 'Career Interview Assistant',
           model: {
             provider: 'anthropic',
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-sonnet-4-5-20250929',
             messages: [{
               role: 'system',
               content: assistantPrompt,

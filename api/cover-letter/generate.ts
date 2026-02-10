@@ -347,7 +347,7 @@ async function extractFacts(
   console.log('Calling Haiku for fact extraction...');
 
   const response = await anthropic.messages.create({
-    model: 'claude-3-5-haiku-20241022',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 4096,
     temperature: 0,
     messages: [
@@ -582,7 +582,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Stream cover letter first
     const coverLetterStream = await anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 4096,
       temperature: 0.35, // Low temperature for factual accuracy, some creativity in phrasing
       system: SYSTEM_PROMPT,
@@ -657,7 +657,7 @@ ${profile.summary ? `\nProfessional Summary:\n${profile.summary}` : ''}
 Write a targeted executive summary for this candidate's CV, tailored for the ${jobTitle} role.`;
 
     const summaryStream = await anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 500,
       temperature: 0.3,
       system: SUMMARY_SYSTEM_PROMPT,
