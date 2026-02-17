@@ -8,7 +8,6 @@
   "rewrites": [
     { "source": "/api/cv-tailor/generate", "destination": "/api/cv-tailor?action=generate" },
     { "source": "/api/cv-tailor/refine", "destination": "/api/cv-tailor?action=refine" },
-    { "source": "/api/cover-letter/refine-summary", "destination": "/api/cover-letter-refine?action=summary" },
     { "source": "/api/cover-letter/refine", "destination": "/api/cover-letter-refine?action=refine" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]

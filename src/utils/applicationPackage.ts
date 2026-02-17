@@ -92,6 +92,14 @@ export async function saveApplicationPackage(
     onProgress?.(msg, step / totalSteps);
   };
 
+  // Acquire directory handle FIRST, while user-gesture context is still active.
+  // Browsers require showDirectoryPicker() to be called close to the click event;
+  // deferring it past heavy async work causes the prompt to be silently suppressed.
+  let baseHandle: FileSystemDirectoryHandle | undefined;
+  if (hasFileSystemAccess()) {
+    baseHandle = await getOrPickDirectoryHandle();
+  }
+
   // Generate CV blobs
   report('Generating CV Word document...');
   const cvDocxBlob = await generateTailoredCVDocxBlob(cvData, profile, template);
@@ -126,9 +134,8 @@ export async function saveApplicationPackage(
 
   report('Saving files...');
 
-  if (hasFileSystemAccess()) {
+  if (baseHandle) {
     // Chrome/Edge: write directly to filesystem
-    const baseHandle = await getOrPickDirectoryHandle();
     const subDirHandle = await baseHandle.getDirectoryHandle(folderName, { create: true });
 
     for (const file of files) {

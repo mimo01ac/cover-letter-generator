@@ -4,7 +4,6 @@ import { useStore } from '../../stores/useStore';
 import { generateCoverLetter } from '../../services/claude';
 import { saveCoverLetter, getAllProfiles, getDocumentsByProfile } from '../../services/db';
 import { ChatRefinement } from './ChatRefinement';
-import { SummaryRefinement } from './SummaryRefinement';
 import { FeedbackAnalysis } from './FeedbackAnalysis';
 import { detectLanguage } from '../../utils/languageDetection';
 import { scrapeJobPosting } from '../../services/jobScraper';
@@ -49,8 +48,6 @@ export function Generator() {
     setIsGenerating,
     setCurrentLetter,
     clearChat,
-    setCurrentSummary,
-    clearSummaryChat,
   } = useStore();
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -68,7 +65,6 @@ export function Generator() {
   const [feedback, setFeedback] = useState<CoverLetterFeedback | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isJobDetailsOpen, setIsJobDetailsOpen] = useState(true);
-  const [generatedSummary, setGeneratedSummary] = useState('');
 
   useEffect(() => {
     loadData();
@@ -156,10 +152,9 @@ export function Generator() {
 
     setIsGenerating(true);
     setGeneratedLetter('');
-    setGeneratedSummary('');
 
     try {
-      const { coverLetter, summary } = await generateCoverLetter(
+      const coverLetter = await generateCoverLetter(
         {
           profile: currentProfile,
           documents,
@@ -169,28 +164,23 @@ export function Generator() {
           language,
           customNotes: customNotes.trim(),
         },
-        (text) => setGeneratedLetter(text),
-        (text) => setGeneratedSummary(text)
+        (text) => setGeneratedLetter(text)
       );
 
       setGeneratedLetter(coverLetter);
-      setGeneratedSummary(summary);
 
-      // Save to database with summary
+      // Save to database
       await saveCoverLetter({
         profileId: currentProfile.id!,
         jobTitle: jobTitle.trim(),
         companyName: companyName.trim(),
         jobDescription: jobDescription.trim(),
         content: coverLetter,
-        executiveSummary: summary || undefined,
       });
 
       // Set up for refinement
       setCurrentLetter(coverLetter);
-      setCurrentSummary(summary);
       clearChat();
-      clearSummaryChat();
 
       // Collapse job details after generation
       setIsJobDetailsOpen(false);
@@ -649,44 +639,6 @@ export function Generator() {
             />
           )}
 
-          {/* Executive Summary Section */}
-          {generatedSummary && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-                  Executive Summary for Your CV
-                </h2>
-                <button
-                  onClick={() => navigator.clipboard.writeText(generatedSummary)}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Copy summary to clipboard"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Summary Paper Document with amber tint */}
-              <div className="paper-document rounded-lg whitespace-pre-wrap text-base leading-relaxed bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
-                {generatedSummary}
-              </div>
-
-              {/* Summary Refinement */}
-              <SummaryRefinement
-                jobTitle={jobTitle}
-                jobDescription={jobDescription}
-                onSummaryUpdated={setGeneratedSummary}
-                initialSummary={generatedSummary}
-                language={language}
-              />
-            </div>
-          )}
         </div>
       </div>
     </div>

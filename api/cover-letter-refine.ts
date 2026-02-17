@@ -27,27 +27,6 @@ interface LetterRefinementRequest {
   language?: 'en' | 'da';
 }
 
-interface SummaryRefinementRequest {
-  currentSummary: string;
-  conversationHistory: ChatMessage[];
-  userRequest: string;
-  profile: {
-    name: string;
-    email: string;
-    phone: string;
-    location: string;
-    summary: string;
-  };
-  documents: Array<{
-    name: string;
-    type: string;
-    content: string;
-  }>;
-  jobTitle: string;
-  jobDescription: string;
-  language?: 'en' | 'da';
-}
-
 // --- Shared auth + streaming helpers ---
 
 async function authenticateRequest(req: VercelRequest, supabaseUrl: string, supabaseKey: string) {
@@ -163,72 +142,6 @@ ${currentLetter}
   await streamAnthropicResponse(res, anthropicKey, system, messages);
 }
 
-// --- Refine summary handler ---
-
-async function handleRefineSummary(req: VercelRequest, res: VercelResponse, anthropicKey: string, supabaseUrl: string, supabaseKey: string) {
-  const auth = await authenticateRequest(req, supabaseUrl, supabaseKey);
-  if ('error' in auth) {
-    return res.status(auth.status).json({ error: auth.error });
-  }
-
-  const body = req.body as SummaryRefinementRequest;
-  const { currentSummary, conversationHistory, userRequest, profile, documents, jobTitle, jobDescription, language = 'en' } = body;
-
-  const cvContent = documents
-    .map((doc) => `### ${doc.name} (${doc.type})\n${doc.content}`)
-    .join('\n\n');
-
-  const languageInstruction = language === 'da'
-    ? 'Respond in Danish (Dansk).'
-    : 'Respond in English.';
-
-  const system = `You are an expert CV writer helping to refine executive summaries for CVs. ${languageInstruction}
-
-## Context
-You are helping ${profile.name} refine their executive summary for a ${jobTitle} position.
-
-## Candidate Profile
-Name: ${profile.name}
-Email: ${profile.email}
-Phone: ${profile.phone}
-Location: ${profile.location}
-
-## Candidate Documents
-${cvContent || 'No documents provided'}
-
-## Job Description
-${jobDescription}
-
-## Current Executive Summary
-${currentSummary}
-
-## Expected Format
-The executive summary has two parts:
-1. **Professional Headline:** A pipe-separated headline (e.g., "Executive Leader in Revenue Operations | CRM & AI Enablement | Commercial Excellence")
-2. **Summary Paragraph:** 3-5 sentences, max 100 words
-
-## Instructions
-- Make the requested changes to the executive summary
-- Preserve the two-part format (headline + summary paragraph)
-- Keep the summary concise (3-5 sentences, max 100 words)
-- Focus on qualifications most relevant to the target role
-- Use active voice and impactful language
-- Include quantifiable achievements when available
-- Avoid generic phrases like "results-driven professional"
-- Output ONLY the revised headline and summary (headline first, blank line, then summary)
-- Do not include explanations unless specifically asked`;
-
-  const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
-    ...conversationHistory.map((msg) => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
-    })),
-    { role: 'user', content: userRequest },
-  ];
-
-  await streamAnthropicResponse(res, anthropicKey, system, messages, 500);
-}
-
 // --- Main router ---
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -249,9 +162,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   switch (action) {
     case 'refine':
       return handleRefine(req, res, anthropicKey, supabaseUrl, supabaseKey);
-    case 'summary':
-      return handleRefineSummary(req, res, anthropicKey, supabaseUrl, supabaseKey);
     default:
-      return res.status(400).json({ error: 'Invalid action. Use ?action=refine or ?action=summary' });
+      return res.status(400).json({ error: 'Invalid action. Use ?action=refine' });
   }
 }

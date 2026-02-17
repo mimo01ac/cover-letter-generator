@@ -25,11 +25,29 @@ export function ProfilePage() {
     }
   }, [currentProfile?.id]);
 
-  // Check and update guide status when documents change
+  // Check guide status and auto-generate if needed on page load / doc change
   useEffect(() => {
-    if (currentProfile?.id && documents.length > 0) {
-      checkGuideStatus();
-    }
+    if (!currentProfile?.id || documents.length === 0) return;
+
+    const checkAndGenerate = async () => {
+      const status = await getGuideStatus(currentProfile.id!, documents);
+      setGuideStatus(status.status);
+
+      const hasRelevantDocs = documents.some(d => d.type === 'cv' || d.type === 'experience');
+      if ((status.status === 'none' || status.status === 'outdated') && hasRelevantDocs) {
+        setGuideStatus('generating');
+        try {
+          await generateAndCacheGuide(currentProfile, documents);
+          const updated = await getGuideStatus(currentProfile.id!, documents);
+          setGuideStatus(updated.status);
+        } catch (err) {
+          console.error('Failed to auto-generate interview guide:', err);
+          setGuideStatus('failed');
+        }
+      }
+    };
+
+    checkAndGenerate();
   }, [currentProfile?.id, documents]);
 
   const checkGuideStatus = async () => {

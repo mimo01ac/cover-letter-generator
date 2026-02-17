@@ -43,6 +43,7 @@ export function CVTailorPage() {
 
   // UI state
   const [isInputCollapsed, setIsInputCollapsed] = useState(false);
+  const [selectedJobKey, setSelectedJobKey] = useState<string | null>(null);
 
   // Save package state
   const cvPreviewRef = useRef<HTMLDivElement>(null);
@@ -118,18 +119,6 @@ export function CVTailorPage() {
       setError(err instanceof Error ? err.message : 'Failed to scrape URL');
     } finally {
       setIsScraping(false);
-    }
-  };
-
-  const handleJobSelect = (key: string) => {
-    if (key) {
-      const [title, company] = key.split('|');
-      const job = previousJobs.find(j => j.jobTitle === title && j.companyName === company);
-      if (job) {
-        setJobTitle(job.jobTitle);
-        setCompanyName(job.companyName);
-        setJobDescription(job.jobDescription);
-      }
     }
   };
 
@@ -400,165 +389,300 @@ export function CVTailorPage() {
               }`}
             >
               <div className="px-6 pb-6 space-y-4 border-t border-gray-100 dark:border-gray-700">
-                {/* URL Scraper */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Import from URL
-                  </label>
-                  <div className="space-y-2">
-                    <input
-                      type="url"
-                      value={jobUrl}
-                      onChange={(e) => setJobUrl(e.target.value)}
-                      placeholder="Paste job posting URL..."
-                      disabled={isScraping}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
-                    />
-                    <button
-                      onClick={handleScrapeUrl}
-                      disabled={isScraping || !jobUrl.trim()}
-                      className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
-                    >
-                      {isScraping ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                          </svg>
-                          Importing...
-                        </>
-                      ) : (
-                        'Import Job Details'
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Previous Jobs Selector */}
+                {/* Job Selector — scrollable list of previous jobs + New Job */}
                 {previousJobs.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Or select from previous jobs
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select a job
                     </label>
-                    <select
-                      onChange={(e) => handleJobSelect(e.target.value)}
-                      defaultValue=""
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="">Choose a previous job...</option>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                       {previousJobs.map((job, index) => {
                         const key = `${job.jobTitle}|${job.companyName}`;
+                        const isSelected = selectedJobKey === key;
                         return (
-                          <option key={`${key}-${index}`} value={key}>
-                            {job.jobTitle} at {job.companyName}
-                          </option>
+                          <button
+                            key={`${key}-${index}`}
+                            onClick={() => {
+                              setSelectedJobKey(key);
+                              setJobTitle(job.jobTitle);
+                              setCompanyName(job.companyName);
+                              setJobDescription(job.jobDescription);
+                            }}
+                            className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                              isSelected
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400'
+                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            }`}
+                          >
+                            <div className="font-medium text-sm text-gray-800 dark:text-white truncate">
+                              {job.jobTitle}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                              <span className="truncate">{job.companyName}</span>
+                              <span className="shrink-0">{new Date(job.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </button>
                         );
                       })}
-                    </select>
+                    </div>
+                    {/* + New Job button */}
+                    <button
+                      onClick={() => {
+                        setSelectedJobKey('new');
+                        setJobTitle('');
+                        setCompanyName('');
+                        setJobDescription('');
+                      }}
+                      className={`w-full mt-2 text-left px-3 py-2.5 rounded-lg border border-dashed transition-colors flex items-center gap-2 ${
+                        selectedJobKey === 'new'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">New Job</span>
+                    </button>
                   </div>
                 )}
 
-                {/* Job Title */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Job Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="Senior Software Engineer"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
+                {/* If no previous jobs, go straight into new-job mode */}
+                {previousJobs.length === 0 && (
+                  <>
+                    {/* URL Scraper */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Import from URL
+                      </label>
+                      <div className="space-y-2">
+                        <input
+                          type="url"
+                          value={jobUrl}
+                          onChange={(e) => setJobUrl(e.target.value)}
+                          placeholder="Paste job posting URL..."
+                          disabled={isScraping}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
+                        />
+                        <button
+                          onClick={handleScrapeUrl}
+                          disabled={isScraping || !jobUrl.trim()}
+                          className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
+                        >
+                          {isScraping ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              Importing...
+                            </>
+                          ) : (
+                            'Import Job Details'
+                          )}
+                        </button>
+                      </div>
+                    </div>
 
-                {/* Company Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Acme Inc."
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
+                    {/* Job Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={jobTitle}
+                        onChange={(e) => setJobTitle(e.target.value)}
+                        placeholder="Senior Software Engineer"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
 
-                {/* Job Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Job Description *
-                  </label>
-                  <textarea
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    rows={6}
-                    placeholder="Paste the full job description here..."
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
-                  />
-                </div>
+                    {/* Company Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Acme Inc."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
 
-                {/* Language */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Language
-                  </label>
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value as 'en' | 'da')}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="en">English</option>
-                    <option value="da">Danish</option>
-                  </select>
-                </div>
+                    {/* Job Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Description *
+                      </label>
+                      <textarea
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
+                        rows={6}
+                        placeholder="Paste the full job description here..."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                      />
+                    </div>
+                  </>
+                )}
 
-                {/* Custom Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Notes (optional)
-                  </label>
-                  <textarea
-                    value={customNotes}
-                    onChange={(e) => setCustomNotes(e.target.value)}
-                    rows={2}
-                    placeholder="Any special instructions..."
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
-                  />
-                </div>
+                {/* Selected previous job — compact summary */}
+                {selectedJobKey && selectedJobKey !== 'new' && previousJobs.length > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 text-sm">
+                    <span className="font-medium text-gray-800 dark:text-white">{jobTitle}</span>
+                    {companyName && (
+                      <span className="text-gray-500 dark:text-gray-400"> @ {companyName}</span>
+                    )}
+                  </div>
+                )}
 
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {/* New Job mode — full form fields */}
+                {selectedJobKey === 'new' && previousJobs.length > 0 && (
+                  <>
+                    {/* URL Scraper */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Import from URL
+                      </label>
+                      <div className="space-y-2">
+                        <input
+                          type="url"
+                          value={jobUrl}
+                          onChange={(e) => setJobUrl(e.target.value)}
+                          placeholder="Paste job posting URL..."
+                          disabled={isScraping}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
+                        />
+                        <button
+                          onClick={handleScrapeUrl}
+                          disabled={isScraping || !jobUrl.trim()}
+                          className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
+                        >
+                          {isScraping ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              Importing...
+                            </>
+                          ) : (
+                            'Import Job Details'
+                          )}
+                        </button>
+                      </div>
+                    </div>
 
-                {/* Generate Button */}
-                <button
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isGenerating ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      {generationMessage || 'Generating...'}
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Tailor CV
-                    </>
-                  )}
-                </button>
+                    {/* Job Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={jobTitle}
+                        onChange={(e) => setJobTitle(e.target.value)}
+                        placeholder="Senior Software Engineer"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
 
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Using profile: <strong>{currentProfile.name}</strong>
-                  {documents.length > 0 && <span> with {documents.length} document(s)</span>}
-                </div>
+                    {/* Company Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Acme Inc."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    {/* Job Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Description *
+                      </label>
+                      <textarea
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
+                        rows={6}
+                        placeholder="Paste the full job description here..."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Shared fields — visible when any job is selected (or no previous jobs) */}
+                {(selectedJobKey || previousJobs.length === 0) && (
+                  <>
+                    {/* Language */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Language
+                      </label>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value as 'en' | 'da')}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="en">English</option>
+                        <option value="da">Danish</option>
+                      </select>
+                    </div>
+
+                    {/* Custom Notes */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Notes (optional)
+                      </label>
+                      <textarea
+                        value={customNotes}
+                        onChange={(e) => setCustomNotes(e.target.value)}
+                        rows={2}
+                        placeholder="Any special instructions..."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                      />
+                    </div>
+
+                    {error && <p className="text-red-500 text-sm">{error}</p>}
+
+                    {/* Generate Button */}
+                    <button
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          {generationMessage || 'Generating...'}
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Tailor CV
+                        </>
+                      )}
+                    </button>
+
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Using profile: <strong>{currentProfile.name}</strong>
+                      {documents.length > 0 && <span> with {documents.length} document(s)</span>}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

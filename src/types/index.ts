@@ -63,17 +63,6 @@ export interface RefinementRequest {
   language?: 'en' | 'da';
 }
 
-export interface SummaryRefinementRequest {
-  currentSummary: string;
-  conversationHistory: ChatMessage[];
-  userRequest: string;
-  profile: Profile;
-  documents: Document[];
-  jobTitle: string;
-  jobDescription: string;
-  language?: 'en' | 'da';
-}
-
 export interface FeedbackSuggestion {
   title: string;
   description: string;

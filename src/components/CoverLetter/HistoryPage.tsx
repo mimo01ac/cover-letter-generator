@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../stores/useStore';
 import { getCoverLettersByProfile, deleteCoverLetter, getAllProfiles } from '../../services/db';
 import { ChatRefinement } from './ChatRefinement';
-import { SummaryRefinement } from './SummaryRefinement';
 import { FeedbackAnalysis } from './FeedbackAnalysis';
 import { analyzeCoverLetter } from '../../services/feedbackAnalyzer';
 import { detectLanguage } from '../../utils/languageDetection';
@@ -11,7 +10,7 @@ import type { CoverLetter, Profile, CoverLetterFeedback } from '../../types';
 
 export function HistoryPage() {
   const navigate = useNavigate();
-  const { currentProfile, setCurrentProfile, setCurrentLetter, clearChat, setCurrentSummary, clearSummaryChat } = useStore();
+  const { currentProfile, setCurrentProfile, setCurrentLetter, clearChat } = useStore();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
   const [selectedLetter, setSelectedLetter] = useState<CoverLetter | null>(null);
@@ -20,7 +19,6 @@ export function HistoryPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<CoverLetterFeedback | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [displayedSummary, setDisplayedSummary] = useState<string>('');
 
   useEffect(() => {
     loadProfiles();
@@ -85,10 +83,6 @@ export function HistoryPage() {
     setCurrentLetter(letter.content);
     clearChat();
     setFeedback(null);
-    // Handle summary
-    setDisplayedSummary(letter.executiveSummary || '');
-    setCurrentSummary(letter.executiveSummary || '');
-    clearSummaryChat();
   };
 
   const handleAnalyze = async () => {
@@ -326,44 +320,6 @@ export function HistoryPage() {
                   onLetterUpdated={handleLetterUpdated}
                 />
 
-                {/* Executive Summary Section */}
-                {displayedSummary && (
-                  <div className="space-y-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-                        Executive Summary
-                      </h3>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(displayedSummary)}
-                        className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        title="Copy summary to clipboard"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Summary Paper Document with amber tint */}
-                    <div className="paper-document rounded-lg whitespace-pre-wrap text-base leading-relaxed bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
-                      {displayedSummary}
-                    </div>
-
-                    {/* Summary Refinement */}
-                    <SummaryRefinement
-                      jobTitle={selectedLetter.jobTitle}
-                      jobDescription={selectedLetter.jobDescription}
-                      onSummaryUpdated={setDisplayedSummary}
-                      initialSummary={displayedSummary}
-                      language={detectLanguage(selectedLetter.content)}
-                    />
-                  </div>
-                )}
               </>
             ) : (
               <div className="flex items-center justify-center h-64 bg-white dark:bg-gray-800 rounded-xl shadow text-gray-400">
