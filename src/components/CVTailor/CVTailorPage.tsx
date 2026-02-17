@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../stores/useStore';
-import { getAllProfiles, getDocumentsByProfile, getPreviousJobs } from '../../services/db';
+import { getAllProfiles, getDocumentsByProfile, getPreviousJobs, getCoverLettersByProfile } from '../../services/db';
 import { generateTailoredCV } from '../../services/cvTailor';
 import { scrapeJobPosting } from '../../services/jobScraper';
 import { downloadTailoredCVAsWord } from '../../utils/wordExport';
@@ -47,6 +47,7 @@ export function CVTailorPage() {
   // Save package state
   const cvPreviewRef = useRef<HTMLDivElement>(null);
   const [showPicker, setShowPicker] = useState(false);
+  const [matchedLetters, setMatchedLetters] = useState<CoverLetter[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState('');
   const [saveProgressPercent, setSaveProgressPercent] = useState(0);
@@ -229,9 +230,30 @@ export function CVTailorPage() {
     if (name) setBaseFolderName(name);
   };
 
-  const handleSavePackage = () => {
-    if (!cvData || !currentProfile) return;
-    setShowPicker(true);
+  const handleSavePackage = async () => {
+    if (!cvData || !currentProfile?.id) return;
+
+    try {
+      const letters = await getCoverLettersByProfile(currentProfile.id);
+      const matches = letters.filter(l =>
+        companyName && l.companyName.toLowerCase() === companyName.toLowerCase()
+      );
+
+      if (matches.length === 1) {
+        // Exact single match — use it directly
+        await executeSave(matches[0]);
+      } else if (matches.length > 1) {
+        // Multiple matches — let user pick
+        setMatchedLetters(matches);
+        setShowPicker(true);
+      } else {
+        // No matching cover letter — save CV only
+        await executeSave(undefined);
+      }
+    } catch {
+      // If lookup fails, fall back to CV only
+      await executeSave(undefined);
+    }
   };
 
   const handlePickerSelect = async (coverLetter: CoverLetter) => {
@@ -695,9 +717,9 @@ export function CVTailorPage() {
       </div>
 
       {/* Cover Letter Picker Modal */}
-      {showPicker && currentProfile?.id && (
+      {showPicker && (
         <CoverLetterPicker
-          profileId={currentProfile.id}
+          coverLetters={matchedLetters}
           companyName={companyName}
           onSelect={handlePickerSelect}
           onCVOnly={handlePickerCVOnly}
