@@ -5,7 +5,7 @@ import { getAllProfiles, getDocumentsByProfile, getPreviousJobs, getCoverLetters
 import { generateTailoredCV } from '../../services/cvTailor';
 import { scrapeJobPosting } from '../../services/jobScraper';
 import { downloadTailoredCVAsWord } from '../../utils/wordExport';
-import { saveApplicationPackage, getBaseFolderName, changeBaseFolder, hasFileSystemAccess } from '../../utils/applicationPackage';
+import { saveApplicationPackage, getBaseFolderName, changeBaseFolder, clearBaseFolder, hasFileSystemAccess, acquireDirectoryHandle } from '../../utils/applicationPackage';
 import type { CVGenerationCallbacks } from '../../services/cvTailor';
 import { TemplateSelector } from './TemplateSelector';
 import { CVPreview } from './CVPreview';
@@ -215,12 +215,33 @@ export function CVTailorPage() {
   }, []);
 
   const handleChangeBaseFolder = async () => {
-    const name = await changeBaseFolder();
-    if (name) setBaseFolderName(name);
+    try {
+      const name = await changeBaseFolder();
+      if (name) setBaseFolderName(name);
+    } catch {
+      // Picker failed (permission lost, browser blocked it, etc.) — clear the stale handle
+      await clearBaseFolder();
+      setBaseFolderName(null);
+    }
   };
+
+  const handleClearBaseFolder = async () => {
+    await clearBaseFolder();
+    setBaseFolderName(null);
+  };
+
+  // Ref to hold the directory handle acquired during the click gesture
+  const dirHandleRef = useRef<FileSystemDirectoryHandle | undefined>(undefined);
 
   const handleSavePackage = async () => {
     if (!cvData || !currentProfile?.id) return;
+
+    // Acquire filesystem permission NOW — while user gesture is still active
+    try {
+      dirHandleRef.current = await acquireDirectoryHandle();
+    } catch {
+      dirHandleRef.current = undefined;
+    }
 
     try {
       const letters = await getCoverLettersByProfile(currentProfile.id);
@@ -276,7 +297,8 @@ export function CVTailorPage() {
         (step, progress) => {
           setSaveProgress(step);
           setSaveProgressPercent(progress);
-        }
+        },
+        dirHandleRef.current
       );
 
       setSaveProgress(`Saved ${result.fileCount} files to "${result.folderName}"`);
@@ -731,17 +753,22 @@ export function CVTailorPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  Download .docx
+                  <span className="flex flex-col leading-tight">
+                    <span>CV .docx</span>
+                  </span>
                 </button>
                 <button
                   onClick={handleSavePackage}
                   disabled={isSaving}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                   </svg>
-                  Save Package
+                  <span className="flex flex-col leading-tight">
+                    <span>Save Package</span>
+                    <span className="text-purple-200 text-xs font-normal">CV + Cover Letter, .docx & .pdf</span>
+                  </span>
                 </button>
               </div>
 
@@ -771,6 +798,13 @@ export function CVTailorPage() {
                         className="text-purple-600 dark:text-purple-400 hover:underline text-xs"
                       >
                         Change
+                      </button>
+                      <span className="text-gray-300 dark:text-gray-600">|</span>
+                      <button
+                        onClick={handleClearBaseFolder}
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:underline text-xs"
+                      >
+                        Reset
                       </button>
                     </div>
                   ) : null}

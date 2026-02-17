@@ -1,4 +1,4 @@
-import { get, set } from 'idb-keyval';
+import { get, set, del } from 'idb-keyval';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { generateCoverLetterDocxBlob, generateTailoredCVDocxBlob, sanitize } from './wordExport';
@@ -39,24 +39,50 @@ export async function changeBaseFolder(): Promise<string | null> {
     const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
     await set(DIR_HANDLE_KEY, handle);
     return handle.name;
-  } catch {
-    return null;
+  } catch (err) {
+    // User cancelled the picker — not an error
+    if (err instanceof DOMException && err.name === 'AbortError') return null;
+    // Any other error — rethrow so caller can handle it
+    throw err;
   }
 }
 
-async function getOrPickDirectoryHandle(): Promise<FileSystemDirectoryHandle> {
-  let handle = await get<FileSystemDirectoryHandle>(DIR_HANDLE_KEY);
-
-  if (handle) {
-    // Verify we still have permission
-    const perm = await handle.requestPermission({ mode: 'readwrite' });
-    if (perm === 'granted') return handle;
+export async function clearBaseFolder(): Promise<void> {
+  try {
+    await del(DIR_HANDLE_KEY);
+  } catch {
+    // If deletion fails, ignore — next save will just re-prompt
   }
+}
 
-  // Need to pick a new directory
-  handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-  await set(DIR_HANDLE_KEY, handle);
-  return handle;
+/** Call this early — while user-gesture context is still active — to secure write permission. */
+export async function acquireDirectoryHandle(): Promise<FileSystemDirectoryHandle | undefined> {
+  if (!hasFileSystemAccess()) return undefined;
+
+  try {
+    let handle = await get<FileSystemDirectoryHandle>(DIR_HANDLE_KEY);
+
+    if (handle) {
+      // queryPermission doesn't consume user gesture; requestPermission does
+      const queryPerm = (handle as unknown as { queryPermission: (desc: { mode: string }) => Promise<string> }).queryPermission;
+      const status = queryPerm
+        ? await queryPerm.call(handle, { mode: 'readwrite' })
+        : 'prompt';
+      if (status === 'granted') return handle;
+
+      // Need to request — must still be in user gesture
+      const perm = await handle.requestPermission({ mode: 'readwrite' });
+      if (perm === 'granted') return handle;
+    }
+
+    // No stored handle or permission denied — prompt user
+    handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await set(DIR_HANDLE_KEY, handle);
+    return handle;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') return undefined;
+    throw err;
+  }
 }
 
 function buildFolderName(companyName: string, jobTitle: string): string {
@@ -78,7 +104,9 @@ async function writeFileToDirectory(
 
 export async function saveApplicationPackage(
   params: SavePackageParams,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  /** Pre-acquired directory handle — call acquireDirectoryHandle() in the click handler */
+  dirHandle?: FileSystemDirectoryHandle
 ): Promise<{ folderName: string; fileCount: number }> {
   const { cvData, profile, template, jobTitle, companyName, coverLetter, cvPreviewElement } = params;
   const company = sanitize(companyName || jobTitle);
@@ -92,13 +120,7 @@ export async function saveApplicationPackage(
     onProgress?.(msg, step / totalSteps);
   };
 
-  // Acquire directory handle FIRST, while user-gesture context is still active.
-  // Browsers require showDirectoryPicker() to be called close to the click event;
-  // deferring it past heavy async work causes the prompt to be silently suppressed.
-  let baseHandle: FileSystemDirectoryHandle | undefined;
-  if (hasFileSystemAccess()) {
-    baseHandle = await getOrPickDirectoryHandle();
-  }
+  const baseHandle = dirHandle;
 
   // Generate CV blobs
   report('Generating CV Word document...');
