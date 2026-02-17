@@ -251,8 +251,9 @@ export function CVTailorPage() {
     // recognise the user-gesture context.
     try {
       dirHandleRef.current = await acquireDirectoryHandle();
+      console.log('[UI] acquireDirectoryHandle returned:', dirHandleRef.current ? dirHandleRef.current.name : 'undefined');
     } catch (err) {
-      console.warn('Failed to acquire directory handle:', err);
+      console.warn('[UI] Failed to acquire directory handle:', err);
       dirHandleRef.current = undefined;
       // Continue — will fall back to ZIP download
     }
@@ -318,9 +319,10 @@ export function CVTailorPage() {
       if (result.warning) {
         setError(result.warning);
       }
+      console.log('[UI] Save result:', result);
       const msg = result.method === 'folder'
-        ? `Saved ${result.fileCount} files to "${result.folderName}"`
-        : `Downloaded ${result.fileCount} files as "${result.folderName}.zip"`;
+        ? `Saved ${result.fileCount} files to folder "${baseFolderName}/${result.folderName}/"`
+        : `Downloaded "${result.folderName}.zip" (${result.fileCount} files) — check your Downloads folder`;
       setSaveProgress(msg);
       setSaveProgressPercent(1);
 

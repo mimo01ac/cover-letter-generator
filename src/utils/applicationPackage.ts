@@ -65,39 +65,46 @@ export async function clearBaseFolder(): Promise<void> {
  * Throws on real errors.
  */
 export async function acquireDirectoryHandle(): Promise<FileSystemDirectoryHandle | undefined> {
-  if (!hasFileSystemAccess()) return undefined;
+  if (!hasFileSystemAccess()) {
+    console.log('[AcquireDir] File System Access API not available');
+    return undefined;
+  }
 
   const handle = await get<FileSystemDirectoryHandle>(DIR_HANDLE_KEY);
+  console.log('[AcquireDir] Stored handle:', handle ? handle.name : 'none');
 
   if (handle) {
-    // Try to get write permission on the stored handle.
-    // requestPermission shows a browser prompt if needed (requires user gesture).
     try {
       const perm = await handle.requestPermission({ mode: 'readwrite' });
+      console.log('[AcquireDir] Permission result:', perm);
       if (perm === 'granted') {
-        // Verify the handle actually works by probing the directory
-        // (catches stale handles where permission was revoked at OS level)
         try {
           const testName = `.___probe_${Date.now()}`;
           const testDir = await handle.getDirectoryHandle(testName, { create: true });
           if (testDir) await handle.removeEntry(testName);
+          console.log('[AcquireDir] Probe succeeded, returning stored handle:', handle.name);
           return handle;
-        } catch {
-          // Handle is broken — fall through to picker
+        } catch (e) {
+          console.warn('[AcquireDir] Probe failed:', e);
         }
       }
-    } catch {
-      // requestPermission threw — handle is stale, fall through to picker
+    } catch (e) {
+      console.warn('[AcquireDir] requestPermission threw:', e);
     }
   }
 
   // No stored handle, permission denied, or handle broken — show picker
   try {
+    console.log('[AcquireDir] Showing directory picker...');
     const freshHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
     await set(DIR_HANDLE_KEY, freshHandle);
+    console.log('[AcquireDir] Fresh handle acquired:', freshHandle.name);
     return freshHandle;
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') return undefined;
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      console.log('[AcquireDir] User cancelled picker');
+      return undefined;
+    }
     throw err;
   }
 }
@@ -178,61 +185,71 @@ export async function saveApplicationPackage(
 
   report('Saving files...');
 
+  // Always create a ZIP — this is the guaranteed-reliable delivery method.
+  const zip = new JSZip();
+  const zipFolder = zip.folder(folderName)!;
+  for (const file of files) {
+    zipFolder.file(file.name, file.blob);
+  }
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+  // If we have a directory handle, try to write to the folder too.
   if (dirHandle) {
-    // Chrome/Edge: write directly to filesystem
-    const subDirHandle = await dirHandle.getDirectoryHandle(folderName, { create: true });
+    try {
+      console.log('[SavePackage] dirHandle name:', dirHandle.name);
+      const subDirHandle = await dirHandle.getDirectoryHandle(folderName, { create: true });
+      console.log('[SavePackage] Created subfolder:', folderName);
 
-    for (const file of files) {
-      await writeFileToDirectory(subDirHandle, file.name, file.blob);
-    }
-
-    // Verify files were actually written by reading back and checking size.
-    // Virtual filesystems (Google Drive FUSE, iCloud) can report success but
-    // write zero bytes or not persist at all.
-    let verifiedCount = 0;
-    for (const file of files) {
-      try {
-        const fh = await subDirHandle.getFileHandle(file.name);
-        const written = await fh.getFile();
-        if (written.size > 0) {
-          verifiedCount++;
-        }
-      } catch {
-        // File wasn't actually written
+      for (const file of files) {
+        console.log(`[SavePackage] Writing ${file.name} (${file.blob.size} bytes)...`);
+        await writeFileToDirectory(subDirHandle, file.name, file.blob);
       }
-    }
 
-    if (verifiedCount === files.length) {
-      return { folderName, fileCount: files.length, method: 'folder' };
-    }
+      // Verify by reading back with a short delay to avoid browser cache
+      await new Promise(r => setTimeout(r, 200));
+      let verifiedCount = 0;
+      for (const file of files) {
+        try {
+          const fh = await subDirHandle.getFileHandle(file.name);
+          const written = await fh.getFile();
+          console.log(`[SavePackage] Verified ${file.name}: ${written.size} bytes (expected ${file.blob.size})`);
+          if (written.size > 0) {
+            verifiedCount++;
+          }
+        } catch (e) {
+          console.warn(`[SavePackage] Verify failed for ${file.name}:`, e);
+        }
+      }
 
-    // Verification failed — files didn't persist (common on cloud-synced folders).
-    // Automatically fall back to ZIP download so the user still gets their files.
-    console.warn(
-      `Only ${verifiedCount}/${files.length} files verified on disk. Falling back to ZIP.`
-    );
-    const folderWarning = 'Files could not be saved to the folder (cloud-synced folders like Google Drive are not supported). Downloaded as ZIP instead. Try selecting a local folder.';
-    // Fall through to ZIP below — carry the warning
-    const zip = new JSZip();
-    const zf = zip.folder(folderName)!;
-    for (const file of files) {
-      zf.file(file.name, file.blob);
+      if (verifiedCount === files.length) {
+        console.log('[SavePackage] All files verified on disk.');
+        return { folderName, fileCount: files.length, method: 'folder' };
+      }
+
+      // Verification failed — fall back to ZIP
+      console.warn(`[SavePackage] Only ${verifiedCount}/${files.length} verified. Downloading ZIP.`);
+      saveAs(zipBlob, `${folderName}.zip`);
+      return {
+        folderName,
+        fileCount: files.length,
+        method: 'zip',
+        warning: `Folder save failed verification (${verifiedCount}/${files.length} files). Downloaded as ZIP instead.`,
+      };
+    } catch (err) {
+      console.error('[SavePackage] Folder write error:', err);
+      // Fall through to ZIP
+      saveAs(zipBlob, `${folderName}.zip`);
+      return {
+        folderName,
+        fileCount: files.length,
+        method: 'zip',
+        warning: `Folder save failed: ${err instanceof Error ? err.message : 'unknown error'}. Downloaded as ZIP instead.`,
+      };
     }
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    saveAs(zipBlob, `${folderName}.zip`);
-    return { folderName, fileCount: files.length, method: 'zip', warning: folderWarning };
   }
 
   // No dirHandle — straight ZIP download
-  const zip = new JSZip();
-  const folder = zip.folder(folderName)!;
-
-  for (const file of files) {
-    folder.file(file.name, file.blob);
-  }
-
-  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  console.log('[SavePackage] No directory handle — downloading ZIP.');
   saveAs(zipBlob, `${folderName}.zip`);
-
   return { folderName, fileCount: files.length, method: 'zip' };
 }
