@@ -5,7 +5,6 @@ import { getAllProfiles, getDocumentsByProfile, getPreviousJobs } from '../../se
 import { generateInterviewBriefing } from '../../services/interviewPrep';
 import { scrapeJobPosting } from '../../services/jobScraper';
 import type { GenerationCallbacks } from '../../services/interviewPrep';
-import { JobSelector } from './JobSelector';
 import { BriefingDocument } from './BriefingDocument';
 import { InterviewQuestions } from './InterviewQuestions';
 import { TalkingPoints } from './TalkingPoints';
@@ -48,6 +47,7 @@ export function InterviewPrepPage() {
   // UI state
   const [activeTab, setActiveTab] = useState<ActiveTab>('briefing');
   const [isInputCollapsed, setIsInputCollapsed] = useState(false);
+  const [selectedJobKey, setSelectedJobKey] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -118,19 +118,6 @@ export function InterviewPrepPage() {
     } finally {
       setIsScraping(false);
     }
-  };
-
-  const handleJobSelect = (job: PreviousJob | null) => {
-    if (job) {
-      setJobTitle(job.jobTitle);
-      setCompanyName(job.companyName);
-      setJobDescription(job.jobDescription);
-    } else {
-      setJobTitle('');
-      setCompanyName('');
-      setJobDescription('');
-    }
-    setCompanyUrl('');
   };
 
   const handleGenerate = async () => {
@@ -319,137 +306,291 @@ export function InterviewPrepPage() {
               }`}
             >
               <div className="px-6 pb-6 space-y-4 border-t border-gray-100 dark:border-gray-700">
-                {/* URL Scraper */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Import from URL
-                  </label>
-                  <div className="space-y-2">
-                    <input
-                      type="url"
-                      value={jobUrl}
-                      onChange={(e) => setJobUrl(e.target.value)}
-                      placeholder="Paste job posting URL..."
-                      disabled={isScraping}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
-                    />
+                {/* Job Selector — scrollable list of previous jobs + New Job */}
+                {previousJobs.length > 0 && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select a job
+                    </label>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {previousJobs.map((job, index) => {
+                        const key = `${job.jobTitle}|${job.companyName}`;
+                        const isSelected = selectedJobKey === key;
+                        return (
+                          <button
+                            key={`${key}-${index}`}
+                            onClick={() => {
+                              setSelectedJobKey(key);
+                              setJobTitle(job.jobTitle);
+                              setCompanyName(job.companyName);
+                              setJobDescription(job.jobDescription);
+                              setCompanyUrl('');
+                            }}
+                            className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                              isSelected
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400'
+                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            }`}
+                          >
+                            <div className="font-medium text-sm text-gray-800 dark:text-white truncate">
+                              {job.jobTitle}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                              <span className="truncate">{job.companyName}</span>
+                              <span className="shrink-0">{new Date(job.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* + New Job button */}
                     <button
-                      onClick={handleScrapeUrl}
-                      disabled={isScraping || !jobUrl.trim()}
-                      className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
+                      onClick={() => {
+                        if (selectedJobKey === 'new') {
+                          setSelectedJobKey(null);
+                        } else {
+                          setSelectedJobKey('new');
+                          setJobTitle('');
+                          setCompanyName('');
+                          setJobDescription('');
+                          setCompanyUrl('');
+                        }
+                      }}
+                      className={`w-full mt-2 text-left px-3 py-2.5 rounded-lg border border-dashed transition-colors flex items-center gap-2 ${
+                        selectedJobKey === 'new'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
                     >
-                      {isScraping ? (
+                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">New Job</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* If no previous jobs, show full form directly */}
+                {previousJobs.length === 0 && (
+                  <>
+                    {/* URL Scraper */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Import from URL
+                      </label>
+                      <div className="space-y-2">
+                        <input
+                          type="url"
+                          value={jobUrl}
+                          onChange={(e) => setJobUrl(e.target.value)}
+                          placeholder="Paste job posting URL..."
+                          disabled={isScraping}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
+                        />
+                        <button
+                          onClick={handleScrapeUrl}
+                          disabled={isScraping || !jobUrl.trim()}
+                          className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
+                        >
+                          {isScraping ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              Importing...
+                            </>
+                          ) : (
+                            'Import Job Details'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Job Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={jobTitle}
+                        onChange={(e) => setJobTitle(e.target.value)}
+                        placeholder="Senior Software Engineer"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    {/* Company Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Acme Inc."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    {/* Job Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Description *
+                      </label>
+                      <textarea
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
+                        rows={6}
+                        placeholder="Paste the full job description here..."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Selected previous job — compact summary */}
+                {selectedJobKey && selectedJobKey !== 'new' && previousJobs.length > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 text-sm">
+                    <span className="font-medium text-gray-800 dark:text-white">{jobTitle}</span>
+                    {companyName && (
+                      <span className="text-gray-500 dark:text-gray-400"> @ {companyName}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* New Job mode — full form fields */}
+                {selectedJobKey === 'new' && previousJobs.length > 0 && (
+                  <>
+                    {/* URL Scraper */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Import from URL
+                      </label>
+                      <div className="space-y-2">
+                        <input
+                          type="url"
+                          value={jobUrl}
+                          onChange={(e) => setJobUrl(e.target.value)}
+                          placeholder="Paste job posting URL..."
+                          disabled={isScraping}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
+                        />
+                        <button
+                          onClick={handleScrapeUrl}
+                          disabled={isScraping || !jobUrl.trim()}
+                          className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
+                        >
+                          {isScraping ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              Importing...
+                            </>
+                          ) : (
+                            'Import Job Details'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Job Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={jobTitle}
+                        onChange={(e) => setJobTitle(e.target.value)}
+                        placeholder="Senior Software Engineer"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    {/* Company Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Acme Inc."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    {/* Job Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Job Description *
+                      </label>
+                      <textarea
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
+                        rows={6}
+                        placeholder="Paste the full job description here..."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Shared fields — visible when any job is selected (or no previous jobs) */}
+                {(selectedJobKey || previousJobs.length === 0) && (
+                  <>
+                    {/* Company URL */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Website (optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={companyUrl}
+                        onChange={(e) => setCompanyUrl(e.target.value)}
+                        placeholder="https://company.com"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    {error && <p className="text-red-500 text-sm">{error}</p>}
+
+                    {/* Generate Button */}
+                    <button
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isGenerating ? (
                         <>
-                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                           </svg>
-                          Importing...
+                          {generationMessage || 'Generating...'}
                         </>
                       ) : (
                         <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                           </svg>
-                          Import Job Details
+                          Generate Briefing Pack
                         </>
                       )}
                     </button>
-                  </div>
-                </div>
 
-                {/* Job Selector - only shows if there are previous jobs */}
-                <JobSelector
-                  previousJobs={previousJobs}
-                  onJobSelect={handleJobSelect}
-                />
-
-                {/* Company URL */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Company Website (optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={companyUrl}
-                    onChange={(e) => setCompanyUrl(e.target.value)}
-                    placeholder="https://company.com"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-
-                {/* Job Title */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Job Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="Senior Software Engineer"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-
-                {/* Company Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Company Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Acme Inc."
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-
-                {/* Job Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Job Description *
-                  </label>
-                  <textarea
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    rows={6}
-                    placeholder="Paste the full job description here..."
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
-                  />
-                </div>
-
-                {error && <p className="text-red-500 text-sm">{error}</p>}
-
-                {/* Generate Button */}
-                <button
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isGenerating ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      {generationMessage || 'Generating...'}
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      Generate Briefing Pack
-                    </>
-                  )}
-                </button>
-
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Using profile: <strong>{currentProfile.name}</strong>
-                  {documents.length > 0 && <span> with {documents.length} document(s)</span>}
-                </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Using profile: <strong>{currentProfile.name}</strong>
+                      {documents.length > 0 && <span> with {documents.length} document(s)</span>}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

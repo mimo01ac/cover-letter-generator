@@ -428,10 +428,14 @@ export function CVTailorPage() {
                     {/* + New Job button */}
                     <button
                       onClick={() => {
-                        setSelectedJobKey('new');
-                        setJobTitle('');
-                        setCompanyName('');
-                        setJobDescription('');
+                        if (selectedJobKey === 'new') {
+                          setSelectedJobKey(null);
+                        } else {
+                          setSelectedJobKey('new');
+                          setJobTitle('');
+                          setCompanyName('');
+                          setJobDescription('');
+                        }
                       }}
                       className={`w-full mt-2 text-left px-3 py-2.5 rounded-lg border border-dashed transition-colors flex items-center gap-2 ${
                         selectedJobKey === 'new'
