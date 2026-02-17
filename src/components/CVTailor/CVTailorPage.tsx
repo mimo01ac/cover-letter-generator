@@ -324,9 +324,11 @@ export function CVTailorPage() {
         dirHandleRef.current
       );
 
-      if (result.warning) {
-        setError(result.warning);
-      }
+      const warnings: string[] = [];
+      if (result.warning) warnings.push(result.warning);
+      if (result.pdfSkipped) warnings.push('PDF generation was skipped (browser compatibility issue). Only .docx files were saved.');
+      if (warnings.length) setError(warnings.join(' '));
+
       console.log('[UI] Save result:', result);
       const msg = result.method === 'folder'
         ? `Saved ${result.fileCount} files to folder "${baseFolderName}/${result.folderName}/"`

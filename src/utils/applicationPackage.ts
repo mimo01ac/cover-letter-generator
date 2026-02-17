@@ -138,7 +138,7 @@ export async function saveApplicationPackage(
   params: SavePackageParams,
   onProgress?: ProgressCallback,
   dirHandle?: FileSystemDirectoryHandle
-): Promise<{ folderName: string; fileCount: number; method: 'folder' | 'zip'; warning?: string }> {
+): Promise<{ folderName: string; fileCount: number; method: 'folder' | 'zip'; warning?: string; pdfSkipped?: boolean }> {
   const { cvData, profile, template, jobTitle, companyName, coverLetter, cvPreviewElement } = params;
   const company = sanitize(companyName || jobTitle);
   const folderName = buildFolderName(companyName || jobTitle, jobTitle);
@@ -156,7 +156,14 @@ export async function saveApplicationPackage(
   const cvDocxBlob = await generateTailoredCVDocxBlob(cvData, profile, template);
 
   report('Generating CV PDF...');
-  const cvPdfBlob = await generateCVPDF(cvPreviewElement);
+  let cvPdfBlob: Blob | undefined;
+  let pdfSkipped = false;
+  try {
+    cvPdfBlob = await generateCVPDF(cvPreviewElement);
+  } catch (pdfErr) {
+    console.warn('[SavePackage] CV PDF generation failed (oklch?):', pdfErr);
+    pdfSkipped = true;
+  }
 
   // Generate cover letter blobs if included
   let clDocxBlob: Blob | undefined;
@@ -166,21 +173,31 @@ export async function saveApplicationPackage(
     report('Generating Cover Letter Word document...');
     clDocxBlob = await generateCoverLetterDocxBlob(coverLetter.content, jobTitle, companyName);
 
-    report('Generating Cover Letter PDF...');
-    clPdfBlob = await generateCoverLetterPDF(coverLetter.content, jobTitle, companyName);
+    if (!pdfSkipped) {
+      report('Generating Cover Letter PDF...');
+      try {
+        clPdfBlob = await generateCoverLetterPDF(coverLetter.content, jobTitle, companyName);
+      } catch (pdfErr) {
+        console.warn('[SavePackage] Cover Letter PDF generation failed:', pdfErr);
+        pdfSkipped = true;
+      }
+    }
   }
 
   // Build file list
   const files: Array<{ name: string; blob: Blob }> = [
     { name: `CV-${company}-${sanitize(template)}.docx`, blob: cvDocxBlob },
-    { name: `CV-${company}-${sanitize(template)}.pdf`, blob: cvPdfBlob },
   ];
 
-  if (clDocxBlob && clPdfBlob) {
-    files.push(
-      { name: `Cover-Letter-${company}.docx`, blob: clDocxBlob },
-      { name: `Cover-Letter-${company}.pdf`, blob: clPdfBlob },
-    );
+  if (cvPdfBlob) {
+    files.push({ name: `CV-${company}-${sanitize(template)}.pdf`, blob: cvPdfBlob });
+  }
+
+  if (clDocxBlob) {
+    files.push({ name: `Cover-Letter-${company}.docx`, blob: clDocxBlob });
+  }
+  if (clPdfBlob) {
+    files.push({ name: `Cover-Letter-${company}.pdf`, blob: clPdfBlob });
   }
 
   report('Saving files...');
@@ -223,7 +240,7 @@ export async function saveApplicationPackage(
 
       if (verifiedCount === files.length) {
         console.log('[SavePackage] All files verified on disk.');
-        return { folderName, fileCount: files.length, method: 'folder' };
+        return { folderName, fileCount: files.length, method: 'folder', pdfSkipped };
       }
 
       // Verification failed — fall back to ZIP
@@ -234,6 +251,7 @@ export async function saveApplicationPackage(
         fileCount: files.length,
         method: 'zip',
         warning: `Folder save failed verification (${verifiedCount}/${files.length} files). Downloaded as ZIP instead.`,
+        pdfSkipped,
       };
     } catch (err) {
       console.error('[SavePackage] Folder write error:', err);
@@ -244,6 +262,7 @@ export async function saveApplicationPackage(
         fileCount: files.length,
         method: 'zip',
         warning: `Folder save failed: ${err instanceof Error ? err.message : 'unknown error'}. Downloaded as ZIP instead.`,
+        pdfSkipped,
       };
     }
   }
@@ -251,5 +270,5 @@ export async function saveApplicationPackage(
   // No dirHandle — straight ZIP download
   console.log('[SavePackage] No directory handle — downloading ZIP.');
   saveAs(zipBlob, `${folderName}.zip`);
-  return { folderName, fileCount: files.length, method: 'zip' };
+  return { folderName, fileCount: files.length, method: 'zip', pdfSkipped };
 }
