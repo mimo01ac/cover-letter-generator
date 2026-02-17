@@ -12,7 +12,9 @@ import type {
   IndustryAnalysis,
   CompetitiveLandscape,
   InterviewQuestion,
-  TalkingPoint
+  TalkingPoint,
+  TailoredCV,
+  TailoredCVData
 } from '../types';
 
 // Helper to convert database rows to app types
@@ -571,6 +573,113 @@ export async function updateInterviewBriefing(
 export async function deleteInterviewBriefing(id: string): Promise<void> {
   const { error } = await (supabase
     .from('interview_briefings' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+// Tailored CV operations
+export async function saveTailoredCV(
+  cv: Omit<TailoredCV, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const { data, error } = await (supabase
+    .from('tailored_cvs' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .insert({
+      profile_id: cv.profileId,
+      job_title: cv.jobTitle,
+      company_name: cv.companyName || '',
+      job_description: cv.jobDescription,
+      selected_template: cv.selectedTemplate,
+      cv_data: cv.cvData as unknown as Json,
+      language: cv.language || 'en',
+      status: cv.status,
+      error: cv.error || null,
+    } as Record<string, unknown>)
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return (data as { id: string }).id;
+}
+
+export async function getTailoredCV(id: string): Promise<TailoredCV | undefined> {
+  const { data, error } = await (supabase
+    .from('tailored_cvs' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) return undefined;
+
+  const row = data as Record<string, unknown>;
+  return {
+    id: row.id as string,
+    profileId: row.profile_id as string,
+    jobTitle: row.job_title as string,
+    companyName: row.company_name as string,
+    jobDescription: row.job_description as string,
+    selectedTemplate: row.selected_template as TailoredCV['selectedTemplate'],
+    cvData: row.cv_data as TailoredCVData,
+    language: row.language as string,
+    status: row.status as string,
+    error: (row.error as string) || undefined,
+    createdAt: toDate(row.created_at as string),
+    updatedAt: toDate(row.updated_at as string),
+  };
+}
+
+export async function getTailoredCVsByProfile(profileId: string): Promise<TailoredCV[]> {
+  const { data, error } = await (supabase
+    .from('tailored_cvs' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .select('*')
+    .eq('profile_id', profileId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return ((data || []) as Record<string, unknown>[]).map((row) => ({
+    id: row.id as string,
+    profileId: row.profile_id as string,
+    jobTitle: row.job_title as string,
+    companyName: row.company_name as string,
+    jobDescription: row.job_description as string,
+    selectedTemplate: row.selected_template as TailoredCV['selectedTemplate'],
+    cvData: row.cv_data as TailoredCVData,
+    language: row.language as string,
+    status: row.status as string,
+    error: (row.error as string) || undefined,
+    createdAt: toDate(row.created_at as string),
+    updatedAt: toDate(row.updated_at as string),
+  }));
+}
+
+export async function updateTailoredCV(
+  id: string,
+  updates: Partial<TailoredCV>
+): Promise<void> {
+  const updateData: Record<string, unknown> = {};
+
+  if (updates.jobTitle !== undefined) updateData.job_title = updates.jobTitle;
+  if (updates.companyName !== undefined) updateData.company_name = updates.companyName;
+  if (updates.jobDescription !== undefined) updateData.job_description = updates.jobDescription;
+  if (updates.selectedTemplate !== undefined) updateData.selected_template = updates.selectedTemplate;
+  if (updates.cvData !== undefined) updateData.cv_data = updates.cvData;
+  if (updates.language !== undefined) updateData.language = updates.language;
+  if (updates.status !== undefined) updateData.status = updates.status;
+  if (updates.error !== undefined) updateData.error = updates.error;
+
+  const { error } = await (supabase
+    .from('tailored_cvs' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .update(updateData)
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function deleteTailoredCV(id: string): Promise<void> {
+  const { error } = await (supabase
+    .from('tailored_cvs' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
     .delete()
     .eq('id', id);
 

@@ -243,6 +243,60 @@ export interface InterviewPrepRefinementRequest {
   conversationHistory: ChatMessage[];
 }
 
+// CV Tailoring Types
+export type CVTemplate = 'classic' | 'hybrid' | 'executive';
+
+export interface CVExperienceEntry {
+  company: string;
+  title: string;
+  period: string;
+  location?: string;
+  bullets: string[];
+}
+
+export interface CVEducationEntry {
+  institution: string;
+  degree: string;
+  period: string;
+  details?: string;
+}
+
+export interface TailoredCVData {
+  headline: string;
+  executiveSummary: string;
+  careerHighlights: string[];
+  coreCompetencies: string[];
+  experience: CVExperienceEntry[];
+  education: CVEducationEntry[];
+  certifications?: string[];
+  languages?: string[];
+}
+
+export interface TailoredCV {
+  id?: string;
+  profileId: string;
+  jobTitle: string;
+  companyName: string;
+  jobDescription: string;
+  selectedTemplate: CVTemplate;
+  cvData: TailoredCVData;
+  language: string;
+  status: string;
+  error?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CVTailorGenerationRequest {
+  profileId: string;
+  jobTitle: string;
+  companyName: string;
+  jobDescription: string;
+  language?: 'en' | 'da';
+  customNotes?: string;
+  selectedTemplate?: CVTemplate;
+}
+
 // Job from previous cover letters (for reuse)
 export interface PreviousJob {
   jobTitle: string;
