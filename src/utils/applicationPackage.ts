@@ -33,52 +33,69 @@ export async function getBaseFolderName(): Promise<string | null> {
   }
 }
 
+/**
+ * Show the native directory picker so the user can choose a new base folder.
+ * Returns the folder name on success, null if the user cancelled.
+ * Throws on unexpected errors.
+ */
 export async function changeBaseFolder(): Promise<string | null> {
-  if (!hasFileSystemAccess()) return null;
+  if (!hasFileSystemAccess()) throw new Error('File System Access API not available');
   try {
     const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
     await set(DIR_HANDLE_KEY, handle);
     return handle.name;
   } catch (err) {
-    // User cancelled the picker — not an error
     if (err instanceof DOMException && err.name === 'AbortError') return null;
-    // Any other error — rethrow so caller can handle it
     throw err;
   }
 }
 
+/**
+ * Delete the stored directory handle from IndexedDB.
+ * Next save will either prompt for a folder or fall back to ZIP.
+ */
 export async function clearBaseFolder(): Promise<void> {
-  try {
-    await del(DIR_HANDLE_KEY);
-  } catch {
-    // If deletion fails, ignore — next save will just re-prompt
-  }
+  await del(DIR_HANDLE_KEY);
 }
 
-/** Call this early — while user-gesture context is still active — to secure write permission. */
+/**
+ * Call this immediately in a click handler to acquire a writable directory handle.
+ * Must be called while user-gesture context is still active.
+ * Returns the handle or undefined (user cancelled / not available).
+ * Throws on real errors.
+ */
 export async function acquireDirectoryHandle(): Promise<FileSystemDirectoryHandle | undefined> {
   if (!hasFileSystemAccess()) return undefined;
 
-  try {
-    let handle = await get<FileSystemDirectoryHandle>(DIR_HANDLE_KEY);
+  const handle = await get<FileSystemDirectoryHandle>(DIR_HANDLE_KEY);
 
-    if (handle) {
-      // queryPermission doesn't consume user gesture; requestPermission does
-      const queryPerm = (handle as unknown as { queryPermission: (desc: { mode: string }) => Promise<string> }).queryPermission;
-      const status = queryPerm
-        ? await queryPerm.call(handle, { mode: 'readwrite' })
-        : 'prompt';
-      if (status === 'granted') return handle;
-
-      // Need to request — must still be in user gesture
+  if (handle) {
+    // Try to get write permission on the stored handle.
+    // requestPermission shows a browser prompt if needed (requires user gesture).
+    try {
       const perm = await handle.requestPermission({ mode: 'readwrite' });
-      if (perm === 'granted') return handle;
+      if (perm === 'granted') {
+        // Verify the handle actually works by probing the directory
+        // (catches stale handles where permission was revoked at OS level)
+        try {
+          const testName = `.___probe_${Date.now()}`;
+          const testDir = await handle.getDirectoryHandle(testName, { create: true });
+          if (testDir) await handle.removeEntry(testName);
+          return handle;
+        } catch {
+          // Handle is broken — fall through to picker
+        }
+      }
+    } catch {
+      // requestPermission threw — handle is stale, fall through to picker
     }
+  }
 
-    // No stored handle or permission denied — prompt user
-    handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    await set(DIR_HANDLE_KEY, handle);
-    return handle;
+  // No stored handle, permission denied, or handle broken — show picker
+  try {
+    const freshHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await set(DIR_HANDLE_KEY, freshHandle);
+    return freshHandle;
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') return undefined;
     throw err;
@@ -87,7 +104,6 @@ export async function acquireDirectoryHandle(): Promise<FileSystemDirectoryHandl
 
 function buildFolderName(companyName: string, jobTitle: string): string {
   const raw = `${companyName} - ${jobTitle}`;
-  // Filesystem-safe: remove characters invalid on Windows/macOS
   return raw.replace(/[<>:"/\\|?*]/g, '-').replace(/\s+/g, ' ').trim();
 }
 
@@ -105,9 +121,8 @@ async function writeFileToDirectory(
 export async function saveApplicationPackage(
   params: SavePackageParams,
   onProgress?: ProgressCallback,
-  /** Pre-acquired directory handle — call acquireDirectoryHandle() in the click handler */
   dirHandle?: FileSystemDirectoryHandle
-): Promise<{ folderName: string; fileCount: number }> {
+): Promise<{ folderName: string; fileCount: number; method: 'folder' | 'zip' }> {
   const { cvData, profile, template, jobTitle, companyName, coverLetter, cvPreviewElement } = params;
   const company = sanitize(companyName || jobTitle);
   const folderName = buildFolderName(companyName || jobTitle, jobTitle);
@@ -119,8 +134,6 @@ export async function saveApplicationPackage(
     step++;
     onProgress?.(msg, step / totalSteps);
   };
-
-  const baseHandle = dirHandle;
 
   // Generate CV blobs
   report('Generating CV Word document...');
@@ -156,15 +169,32 @@ export async function saveApplicationPackage(
 
   report('Saving files...');
 
-  if (baseHandle) {
+  if (dirHandle) {
     // Chrome/Edge: write directly to filesystem
-    const subDirHandle = await baseHandle.getDirectoryHandle(folderName, { create: true });
+    const subDirHandle = await dirHandle.getDirectoryHandle(folderName, { create: true });
 
     for (const file of files) {
       await writeFileToDirectory(subDirHandle, file.name, file.blob);
     }
+
+    // Verify files were actually written by reading them back
+    let verifiedCount = 0;
+    for (const file of files) {
+      try {
+        await subDirHandle.getFileHandle(file.name);
+        verifiedCount++;
+      } catch {
+        // File wasn't actually written
+      }
+    }
+
+    if (verifiedCount === 0) {
+      throw new Error('Files could not be written to the selected folder. Try clicking Reset and selecting a new folder.');
+    }
+
+    return { folderName, fileCount: files.length, method: 'folder' };
   } else {
-    // Firefox/Safari: create ZIP
+    // Fallback: create ZIP download
     const zip = new JSZip();
     const folder = zip.folder(folderName)!;
 
@@ -174,7 +204,7 @@ export async function saveApplicationPackage(
 
     const zipBlob = await zip.generateAsync({ type: 'blob' });
     saveAs(zipBlob, `${folderName}.zip`);
-  }
 
-  return { folderName, fileCount: files.length };
+    return { folderName, fileCount: files.length, method: 'zip' };
+  }
 }

@@ -217,17 +217,27 @@ export function CVTailorPage() {
   const handleChangeBaseFolder = async () => {
     try {
       const name = await changeBaseFolder();
-      if (name) setBaseFolderName(name);
-    } catch {
-      // Picker failed (permission lost, browser blocked it, etc.) — clear the stale handle
+      if (name) {
+        setBaseFolderName(name);
+        setError('');
+      }
+      // null means user cancelled — do nothing
+    } catch (err) {
+      // Picker failed — clear the stale handle and show error
       await clearBaseFolder();
       setBaseFolderName(null);
+      setError(err instanceof Error ? err.message : 'Could not open folder picker. Folder has been reset.');
     }
   };
 
   const handleClearBaseFolder = async () => {
-    await clearBaseFolder();
-    setBaseFolderName(null);
+    try {
+      await clearBaseFolder();
+      setBaseFolderName(null);
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset folder');
+    }
   };
 
   // Ref to hold the directory handle acquired during the click gesture
@@ -236,11 +246,15 @@ export function CVTailorPage() {
   const handleSavePackage = async () => {
     if (!cvData || !currentProfile?.id) return;
 
-    // Acquire filesystem permission NOW — while user gesture is still active
+    // Acquire filesystem permission NOW — while user gesture is still active.
+    // This MUST be the first await in the click handler for the browser to
+    // recognise the user-gesture context.
     try {
       dirHandleRef.current = await acquireDirectoryHandle();
-    } catch {
+    } catch (err) {
+      console.warn('Failed to acquire directory handle:', err);
       dirHandleRef.current = undefined;
+      // Continue — will fall back to ZIP download
     }
 
     try {
@@ -301,7 +315,10 @@ export function CVTailorPage() {
         dirHandleRef.current
       );
 
-      setSaveProgress(`Saved ${result.fileCount} files to "${result.folderName}"`);
+      const msg = result.method === 'folder'
+        ? `Saved ${result.fileCount} files to "${result.folderName}"`
+        : `Downloaded ${result.fileCount} files as "${result.folderName}.zip"`;
+      setSaveProgress(msg);
       setSaveProgressPercent(1);
 
       // Refresh folder name in case it was first pick
