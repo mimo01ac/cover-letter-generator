@@ -140,7 +140,8 @@ export async function saveApplicationPackage(
   dirHandle?: FileSystemDirectoryHandle
 ): Promise<{ folderName: string; fileCount: number; method: 'folder' | 'zip'; warning?: string; pdfSkipped?: boolean }> {
   const { cvData, profile, template, jobTitle, companyName, coverLetter, cvPreviewElement } = params;
-  const company = sanitize(companyName || jobTitle);
+  const userName = sanitize(profile.name);
+  const position = sanitize(jobTitle);
   const folderName = buildFolderName(companyName || jobTitle, jobTitle);
   const includeCoverLetter = !!coverLetter;
   const totalSteps = includeCoverLetter ? 5 : 3;
@@ -186,18 +187,18 @@ export async function saveApplicationPackage(
 
   // Build file list
   const files: Array<{ name: string; blob: Blob }> = [
-    { name: `CV-${company}-${sanitize(template)}.docx`, blob: cvDocxBlob },
+    { name: `CV-${userName}.docx`, blob: cvDocxBlob },
   ];
 
   if (cvPdfBlob) {
-    files.push({ name: `CV-${company}-${sanitize(template)}.pdf`, blob: cvPdfBlob });
+    files.push({ name: `CV-${userName}.pdf`, blob: cvPdfBlob });
   }
 
   if (clDocxBlob) {
-    files.push({ name: `Cover-Letter-${company}.docx`, blob: clDocxBlob });
+    files.push({ name: `Cover-Letter-${position}.docx`, blob: clDocxBlob });
   }
   if (clPdfBlob) {
-    files.push({ name: `Cover-Letter-${company}.pdf`, blob: clPdfBlob });
+    files.push({ name: `Cover-Letter-${position}.pdf`, blob: clPdfBlob });
   }
 
   report('Saving files...');
