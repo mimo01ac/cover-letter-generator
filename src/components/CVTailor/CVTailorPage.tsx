@@ -5,7 +5,7 @@ import { getAllProfiles, getDocumentsByProfile, getPreviousJobs, getCoverLetters
 import { generateTailoredCV } from '../../services/cvTailor';
 import { scrapeJobPosting } from '../../services/jobScraper';
 import { downloadTailoredCVAsWord } from '../../utils/wordExport';
-import { saveApplicationPackage, getBaseFolderName, changeBaseFolder, clearBaseFolder, hasFileSystemAccess, acquireDirectoryHandle } from '../../utils/applicationPackage';
+import { saveApplicationPackage, getBaseFolderName, changeBaseFolder, clearBaseFolder, hasFileSystemAccess, acquireDirectoryHandle, isCloudFolder } from '../../utils/applicationPackage';
 import type { CVGenerationCallbacks } from '../../services/cvTailor';
 import { TemplateSelector } from './TemplateSelector';
 import { CVPreview } from './CVPreview';
@@ -315,6 +315,9 @@ export function CVTailorPage() {
         dirHandleRef.current
       );
 
+      if (result.warning) {
+        setError(result.warning);
+      }
       const msg = result.method === 'folder'
         ? `Saved ${result.fileCount} files to "${result.folderName}"`
         : `Downloaded ${result.fileCount} files as "${result.folderName}.zip"`;
@@ -791,40 +794,50 @@ export function CVTailorPage() {
 
               {/* Save progress + folder indicator */}
               {(isSaving || (hasFileSystemAccess() && baseFolderName)) && (
-                <div className="flex items-center gap-3 text-sm">
-                  {isSaving ? (
-                    <div className="flex-1 flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-purple-600 h-full rounded-full transition-all duration-300"
-                          style={{ width: `${Math.round(saveProgressPercent * 100)}%` }}
-                        />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3 text-sm">
+                    {isSaving ? (
+                      <div className="flex-1 flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-purple-600 h-full rounded-full transition-all duration-300"
+                            style={{ width: `${Math.round(saveProgressPercent * 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                          {saveProgress}
+                        </span>
                       </div>
-                      <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {saveProgress}
-                      </span>
-                    </div>
-                  ) : hasFileSystemAccess() && baseFolderName ? (
-                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    ) : hasFileSystemAccess() && baseFolderName ? (
+                      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 flex-wrap">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        <span>{baseFolderName}</span>
+                        <button
+                          onClick={handleChangeBaseFolder}
+                          className="text-purple-600 dark:text-purple-400 hover:underline text-xs"
+                        >
+                          Change
+                        </button>
+                        <span className="text-gray-300 dark:text-gray-600">|</span>
+                        <button
+                          onClick={handleClearBaseFolder}
+                          className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:underline text-xs"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                  {!isSaving && hasFileSystemAccess() && baseFolderName && isCloudFolder(baseFolderName) && (
+                    <div className="flex items-start gap-1.5 text-amber-600 dark:text-amber-400 text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded px-2.5 py-1.5">
+                      <svg className="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                       </svg>
-                      <span>{baseFolderName}</span>
-                      <button
-                        onClick={handleChangeBaseFolder}
-                        className="text-purple-600 dark:text-purple-400 hover:underline text-xs"
-                      >
-                        Change
-                      </button>
-                      <span className="text-gray-300 dark:text-gray-600">|</span>
-                      <button
-                        onClick={handleClearBaseFolder}
-                        className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:underline text-xs"
-                      >
-                        Reset
-                      </button>
+                      <span>Cloud folders (Google Drive, iCloud, Dropbox) are not supported. Please click Change and select a local folder on your computer, e.g. Desktop or Documents.</span>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               )}
 

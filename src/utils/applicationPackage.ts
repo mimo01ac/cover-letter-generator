@@ -107,6 +107,15 @@ function buildFolderName(companyName: string, jobTitle: string): string {
   return raw.replace(/[<>:"/\\|?*]/g, '-').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Returns true if the folder name looks like a cloud-synced directory
+ * (Google Drive, iCloud, Dropbox, OneDrive). These often silently break
+ * File System Access API writes.
+ */
+export function isCloudFolder(name: string): boolean {
+  return /google\s*drive|my\s*drive|icloud|dropbox|onedrive/i.test(name);
+}
+
 async function writeFileToDirectory(
   dirHandle: FileSystemDirectoryHandle,
   filename: string,
@@ -122,7 +131,7 @@ export async function saveApplicationPackage(
   params: SavePackageParams,
   onProgress?: ProgressCallback,
   dirHandle?: FileSystemDirectoryHandle
-): Promise<{ folderName: string; fileCount: number; method: 'folder' | 'zip' }> {
+): Promise<{ folderName: string; fileCount: number; method: 'folder' | 'zip'; warning?: string }> {
   const { cvData, profile, template, jobTitle, companyName, coverLetter, cvPreviewElement } = params;
   const company = sanitize(companyName || jobTitle);
   const folderName = buildFolderName(companyName || jobTitle, jobTitle);
@@ -177,34 +186,53 @@ export async function saveApplicationPackage(
       await writeFileToDirectory(subDirHandle, file.name, file.blob);
     }
 
-    // Verify files were actually written by reading them back
+    // Verify files were actually written by reading back and checking size.
+    // Virtual filesystems (Google Drive FUSE, iCloud) can report success but
+    // write zero bytes or not persist at all.
     let verifiedCount = 0;
     for (const file of files) {
       try {
-        await subDirHandle.getFileHandle(file.name);
-        verifiedCount++;
+        const fh = await subDirHandle.getFileHandle(file.name);
+        const written = await fh.getFile();
+        if (written.size > 0) {
+          verifiedCount++;
+        }
       } catch {
         // File wasn't actually written
       }
     }
 
-    if (verifiedCount === 0) {
-      throw new Error('Files could not be written to the selected folder. Try clicking Reset and selecting a new folder.');
+    if (verifiedCount === files.length) {
+      return { folderName, fileCount: files.length, method: 'folder' };
     }
 
-    return { folderName, fileCount: files.length, method: 'folder' };
-  } else {
-    // Fallback: create ZIP download
+    // Verification failed — files didn't persist (common on cloud-synced folders).
+    // Automatically fall back to ZIP download so the user still gets their files.
+    console.warn(
+      `Only ${verifiedCount}/${files.length} files verified on disk. Falling back to ZIP.`
+    );
+    const folderWarning = 'Files could not be saved to the folder (cloud-synced folders like Google Drive are not supported). Downloaded as ZIP instead. Try selecting a local folder.';
+    // Fall through to ZIP below — carry the warning
     const zip = new JSZip();
-    const folder = zip.folder(folderName)!;
-
+    const zf = zip.folder(folderName)!;
     for (const file of files) {
-      folder.file(file.name, file.blob);
+      zf.file(file.name, file.blob);
     }
-
     const zipBlob = await zip.generateAsync({ type: 'blob' });
     saveAs(zipBlob, `${folderName}.zip`);
-
-    return { folderName, fileCount: files.length, method: 'zip' };
+    return { folderName, fileCount: files.length, method: 'zip', warning: folderWarning };
   }
+
+  // No dirHandle — straight ZIP download
+  const zip = new JSZip();
+  const folder = zip.folder(folderName)!;
+
+  for (const file of files) {
+    folder.file(file.name, file.blob);
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  saveAs(zipBlob, `${folderName}.zip`);
+
+  return { folderName, fileCount: files.length, method: 'zip' };
 }
