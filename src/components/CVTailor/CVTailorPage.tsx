@@ -263,19 +263,23 @@ export function CVTailorPage() {
       const matches = letters.filter(l =>
         companyName && l.companyName.toLowerCase() === companyName.toLowerCase()
       );
+      console.log('[UI] Cover letters found:', letters.length, 'Matches:', matches.length);
 
       if (matches.length === 1) {
         // Exact single match — use it directly
         await executeSave(matches[0]);
       } else if (matches.length > 1) {
         // Multiple matches — let user pick
+        console.log('[UI] Showing picker for', matches.length, 'matches');
         setMatchedLetters(matches);
         setShowPicker(true);
       } else {
         // No matching cover letter — save CV only
+        console.log('[UI] No matching cover letter, saving CV only');
         await executeSave(undefined);
       }
-    } catch {
+    } catch (err) {
+      console.error('[UI] Cover letter lookup failed:', err);
       // If lookup fails, fall back to CV only
       await executeSave(undefined);
     }
@@ -292,7 +296,11 @@ export function CVTailorPage() {
   };
 
   const executeSave = async (coverLetter: CoverLetter | undefined) => {
-    if (!cvData || !currentProfile || !cvPreviewRef.current) return;
+    console.log('[UI] executeSave called. cvData:', !!cvData, 'currentProfile:', !!currentProfile, 'cvPreviewRef:', !!cvPreviewRef.current, 'dirHandle:', !!dirHandleRef.current);
+    if (!cvData || !currentProfile || !cvPreviewRef.current) {
+      console.error('[UI] executeSave ABORTED: missing', !cvData ? 'cvData' : '', !currentProfile ? 'currentProfile' : '', !cvPreviewRef.current ? 'cvPreviewRef' : '');
+      return;
+    }
 
     setIsSaving(true);
     setSaveProgress('Starting...');
