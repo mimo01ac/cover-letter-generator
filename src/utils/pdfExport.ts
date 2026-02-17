@@ -9,6 +9,44 @@ const PDF_OPTIONS = {
   pagebreak: { mode: ['avoid-all', 'css'] },
 };
 
+/**
+ * html2canvas cannot parse oklch() colors (used by Tailwind CSS v4).
+ * Walk every element in the clone and convert computed oklch values to rgb.
+ */
+function convertOklchToRgb(root: HTMLElement): void {
+  const COLOR_PROPS = [
+    'color', 'backgroundColor', 'borderColor',
+    'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
+    'outlineColor', 'textDecorationColor',
+  ];
+
+  const elements = root.querySelectorAll('*');
+  const all: Element[] = [root, ...Array.from(elements)];
+
+  for (const el of all) {
+    if (!(el instanceof HTMLElement)) continue;
+    const computed = window.getComputedStyle(el);
+    for (const prop of COLOR_PROPS) {
+      const val = computed.getPropertyValue(prop);
+      if (val && val.includes('oklch')) {
+        // The browser already resolved oklch to an internal value.
+        // Reading computed style returns rgb() in most browsers, but
+        // inline styles or CSS variables can still surface oklch().
+        // Force the browser to resolve it by round-tripping through a canvas.
+        try {
+          const ctx = document.createElement('canvas').getContext('2d')!;
+          ctx.fillStyle = val;
+          // ctx.fillStyle normalises any CSS colour to #rrggbb or rgba()
+          el.style.setProperty(prop.replace(/[A-Z]/g, m => `-${m.toLowerCase()}`), ctx.fillStyle);
+        } catch {
+          // If conversion fails, use a safe fallback
+          el.style.setProperty(prop.replace(/[A-Z]/g, m => `-${m.toLowerCase()}`), '#000000');
+        }
+      }
+    }
+  }
+}
+
 export async function generateCVPDF(cvPreviewElement: HTMLElement): Promise<Blob> {
   const clone = cvPreviewElement.cloneNode(true) as HTMLElement;
   clone.style.width = '794px'; // A4 width at 96dpi
@@ -18,6 +56,9 @@ export async function generateCVPDF(cvPreviewElement: HTMLElement): Promise<Blob
   clone.style.left = '-9999px';
   clone.style.top = '0';
   document.body.appendChild(clone);
+
+  // Convert oklch() colours so html2canvas can parse them
+  convertOklchToRgb(clone);
 
   try {
     const blob: Blob = await html2pdf()
