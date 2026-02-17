@@ -6,3 +6,4 @@ export { CVPreviewHybrid } from './CVPreviewHybrid';
 export { CVPreviewExecutive } from './CVPreviewExecutive';
 export { CVHistory } from './CVHistory';
 export { CVRefinement } from './CVRefinement';
+export { CoverLetterPicker } from './CoverLetterPicker';

@@ -3,64 +3,61 @@ import { saveAs } from 'file-saver';
 import { detectLanguage } from './languageDetection';
 import type { TailoredCVData, CVTemplate, Profile } from '../types';
 
-export async function downloadCoverLetterAsWord(
+export function sanitize(s: string): string {
+  return s.replace(/[^a-zA-Z0-9]/g, '-');
+}
+
+export async function generateCoverLetterDocxBlob(
   coverLetter: string,
   jobTitle: string,
   companyName?: string
-): Promise<void> {
-  // Detect language and create appropriate heading
+): Promise<Blob> {
   const language = detectLanguage(coverLetter);
 
   let headingText: string;
   if (language === 'da') {
-    // Danish
     headingText = companyName
       ? `Ansøgning til ${jobTitle} hos ${companyName}`
       : `Ansøgning til ${jobTitle}`;
   } else {
-    // English (default)
     headingText = companyName
       ? `Application for ${jobTitle} at ${companyName}`
       : `Application for ${jobTitle}`;
   }
 
-  // Split cover letter into paragraphs
   const paragraphs = coverLetter
     .split('\n\n')
     .filter(p => p.trim().length > 0);
 
-  // Create document
   const doc = new Document({
     sections: [
       {
         properties: {},
         children: [
-          // Heading
           new Paragraph({
             children: [
               new TextRun({
                 text: headingText,
                 bold: true,
-                size: 28, // 14pt
+                size: 28,
               }),
             ],
             heading: HeadingLevel.HEADING_1,
             spacing: {
-              after: 400, // Space after heading
+              after: 400,
             },
           }),
-          // Cover letter paragraphs
           ...paragraphs.map(
             (text) =>
               new Paragraph({
                 children: [
                   new TextRun({
                     text: text.replace(/\n/g, ' ').trim(),
-                    size: 24, // 12pt
+                    size: 24,
                   }),
                 ],
                 spacing: {
-                  after: 200, // Space between paragraphs
+                  after: 200,
                 },
               })
           ),
@@ -69,11 +66,18 @@ export async function downloadCoverLetterAsWord(
     ],
   });
 
-  // Generate and download
-  const blob = await Packer.toBlob(doc);
+  return Packer.toBlob(doc);
+}
+
+export async function downloadCoverLetterAsWord(
+  coverLetter: string,
+  jobTitle: string,
+  companyName?: string
+): Promise<void> {
+  const blob = await generateCoverLetterDocxBlob(coverLetter, jobTitle, companyName);
   const filename = companyName
-    ? `Application-${companyName.replace(/[^a-zA-Z0-9]/g, '-')}-${new Date().toISOString().split('T')[0]}.docx`
-    : `Application-${jobTitle.replace(/[^a-zA-Z0-9]/g, '-')}-${new Date().toISOString().split('T')[0]}.docx`;
+    ? `Application-${sanitize(companyName)}-${new Date().toISOString().split('T')[0]}.docx`
+    : `Application-${sanitize(jobTitle)}-${new Date().toISOString().split('T')[0]}.docx`;
 
   saveAs(blob, filename);
 }
@@ -194,14 +198,12 @@ function optionalSections(cvData: TailoredCVData, font: string = 'Calibri'): Par
 }
 
 // Template 1: Classic Chronological
-// Header → Summary → Work Experience → Education → Skills → Optional
 function buildClassicDocx(cvData: TailoredCVData, profile: Profile): Document {
   const font = 'Calibri';
   const children: Paragraph[] = [];
 
   children.push(...cvHeader(profile, cvData.headline, font));
 
-  // Professional Summary
   if (cvData.executiveSummary) {
     children.push(sectionHeading('Professional Summary', font));
     children.push(new Paragraph({
@@ -210,19 +212,16 @@ function buildClassicDocx(cvData: TailoredCVData, profile: Profile): Document {
     }));
   }
 
-  // Work Experience
   if (cvData.experience?.length) {
     children.push(sectionHeading('Work Experience', font));
     children.push(...experienceEntries(cvData, font));
   }
 
-  // Education
   if (cvData.education?.length) {
     children.push(sectionHeading('Education', font));
     children.push(...educationEntries(cvData, font));
   }
 
-  // Skills (comma-separated)
   if (cvData.coreCompetencies?.length) {
     children.push(sectionHeading('Skills', font));
     children.push(new Paragraph({
@@ -239,14 +238,12 @@ function buildClassicDocx(cvData: TailoredCVData, profile: Profile): Document {
 }
 
 // Template 2: Modern Hybrid (Combination)
-// Header → Summary → Core Competencies (grid) → Experience → Key Achievements → Education → Certs
 function buildHybridDocx(cvData: TailoredCVData, profile: Profile): Document {
   const font = 'Calibri';
   const children: Paragraph[] = [];
 
   children.push(...cvHeader(profile, cvData.headline, font));
 
-  // Professional Summary
   if (cvData.executiveSummary) {
     children.push(sectionHeading('Professional Summary', font));
     children.push(new Paragraph({
@@ -255,7 +252,6 @@ function buildHybridDocx(cvData: TailoredCVData, profile: Profile): Document {
     }));
   }
 
-  // Core Competencies - tabbed grid (3 per line)
   if (cvData.coreCompetencies?.length) {
     children.push(sectionHeading('Core Competencies', font));
     for (let i = 0; i < cvData.coreCompetencies.length; i += 3) {
@@ -276,19 +272,16 @@ function buildHybridDocx(cvData: TailoredCVData, profile: Profile): Document {
     }
   }
 
-  // Professional Experience
   if (cvData.experience?.length) {
     children.push(sectionHeading('Professional Experience', font));
     children.push(...experienceEntries(cvData, font));
   }
 
-  // Key Achievements
   if (cvData.careerHighlights?.length) {
     children.push(sectionHeading('Key Achievements', font));
     cvData.careerHighlights.forEach(h => children.push(bulletParagraph(h, font)));
   }
 
-  // Education
   if (cvData.education?.length) {
     children.push(sectionHeading('Education', font));
     children.push(...educationEntries(cvData, font));
@@ -302,14 +295,12 @@ function buildHybridDocx(cvData: TailoredCVData, profile: Profile): Document {
 }
 
 // Template 3: Executive Impact
-// Header (with designations) → Executive Summary (substantial) → Career Highlights → Core Competencies → Experience → Education
 function buildExecutiveDocx(cvData: TailoredCVData, profile: Profile): Document {
   const font = 'Georgia';
   const children: Paragraph[] = [];
 
   children.push(...cvHeader(profile, cvData.headline, font));
 
-  // Executive Summary - more substantial, paragraph format
   if (cvData.executiveSummary) {
     children.push(sectionHeading('Executive Summary', font));
     children.push(new Paragraph({
@@ -318,13 +309,11 @@ function buildExecutiveDocx(cvData: TailoredCVData, profile: Profile): Document 
     }));
   }
 
-  // Career Highlights - greatest hits across career
   if (cvData.careerHighlights?.length) {
     children.push(sectionHeading('Career Highlights', font));
     cvData.careerHighlights.forEach(h => children.push(bulletParagraph(h, font)));
   }
 
-  // Core Competencies
   if (cvData.coreCompetencies?.length) {
     children.push(sectionHeading('Core Competencies', font));
     children.push(new Paragraph({
@@ -333,13 +322,11 @@ function buildExecutiveDocx(cvData: TailoredCVData, profile: Profile): Document 
     }));
   }
 
-  // Professional Experience
   if (cvData.experience?.length) {
     children.push(sectionHeading('Professional Experience', font));
     children.push(...experienceEntries(cvData, font));
   }
 
-  // Education
   if (cvData.education?.length) {
     children.push(sectionHeading('Education', font));
     children.push(...educationEntries(cvData, font));
@@ -352,13 +339,11 @@ function buildExecutiveDocx(cvData: TailoredCVData, profile: Profile): Document 
   });
 }
 
-export async function downloadTailoredCVAsWord(
+export async function generateTailoredCVDocxBlob(
   cvData: TailoredCVData,
   profile: Profile,
-  template: CVTemplate,
-  jobTitle: string,
-  companyName?: string
-): Promise<void> {
+  template: CVTemplate
+): Promise<Blob> {
   let doc: Document;
 
   switch (template) {
@@ -374,9 +359,18 @@ export async function downloadTailoredCVAsWord(
       break;
   }
 
-  const blob = await Packer.toBlob(doc);
+  return Packer.toBlob(doc);
+}
+
+export async function downloadTailoredCVAsWord(
+  cvData: TailoredCVData,
+  profile: Profile,
+  template: CVTemplate,
+  jobTitle: string,
+  companyName?: string
+): Promise<void> {
+  const blob = await generateTailoredCVDocxBlob(cvData, profile, template);
   const date = new Date().toISOString().split('T')[0];
-  const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9]/g, '-');
 
   const filename = companyName
     ? `CV-${sanitize(companyName)}-${sanitize(template)}-${date}.docx`

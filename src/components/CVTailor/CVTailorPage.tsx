@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../stores/useStore';
 import { getAllProfiles, getDocumentsByProfile, getPreviousJobs } from '../../services/db';
 import { generateTailoredCV } from '../../services/cvTailor';
 import { scrapeJobPosting } from '../../services/jobScraper';
 import { downloadTailoredCVAsWord } from '../../utils/wordExport';
+import { saveApplicationPackage, getBaseFolderName, changeBaseFolder, hasFileSystemAccess } from '../../utils/applicationPackage';
 import type { CVGenerationCallbacks } from '../../services/cvTailor';
 import { TemplateSelector } from './TemplateSelector';
 import { CVPreview } from './CVPreview';
 import { CVHistory } from './CVHistory';
 import { CVRefinement } from './CVRefinement';
-import type { Profile, PreviousJob, TailoredCVData, CVTemplate } from '../../types';
+import { CoverLetterPicker } from './CoverLetterPicker';
+import type { Profile, PreviousJob, TailoredCVData, CVTemplate, CoverLetter } from '../../types';
 
 export function CVTailorPage() {
   const navigate = useNavigate();
@@ -41,6 +43,14 @@ export function CVTailorPage() {
 
   // UI state
   const [isInputCollapsed, setIsInputCollapsed] = useState(false);
+
+  // Save package state
+  const cvPreviewRef = useRef<HTMLDivElement>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveProgress, setSaveProgress] = useState('');
+  const [saveProgressPercent, setSaveProgressPercent] = useState(0);
+  const [baseFolderName, setBaseFolderName] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -204,6 +214,80 @@ export function CVTailorPage() {
       await downloadTailoredCVAsWord(cvData, currentProfile, selectedTemplate, jobTitle, companyName);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed');
+    }
+  };
+
+  // Load base folder name on mount
+  useEffect(() => {
+    if (hasFileSystemAccess()) {
+      getBaseFolderName().then(setBaseFolderName);
+    }
+  }, []);
+
+  const handleChangeBaseFolder = async () => {
+    const name = await changeBaseFolder();
+    if (name) setBaseFolderName(name);
+  };
+
+  const handleSavePackage = () => {
+    if (!cvData || !currentProfile) return;
+    setShowPicker(true);
+  };
+
+  const handlePickerSelect = async (coverLetter: CoverLetter) => {
+    setShowPicker(false);
+    await executeSave(coverLetter);
+  };
+
+  const handlePickerCVOnly = async () => {
+    setShowPicker(false);
+    await executeSave(undefined);
+  };
+
+  const executeSave = async (coverLetter: CoverLetter | undefined) => {
+    if (!cvData || !currentProfile || !cvPreviewRef.current) return;
+
+    setIsSaving(true);
+    setSaveProgress('Starting...');
+    setSaveProgressPercent(0);
+
+    try {
+      const result = await saveApplicationPackage(
+        {
+          cvData,
+          profile: currentProfile,
+          template: selectedTemplate,
+          jobTitle,
+          companyName,
+          coverLetter,
+          cvPreviewElement: cvPreviewRef.current,
+        },
+        (step, progress) => {
+          setSaveProgress(step);
+          setSaveProgressPercent(progress);
+        }
+      );
+
+      setSaveProgress(`Saved ${result.fileCount} files to "${result.folderName}"`);
+      setSaveProgressPercent(1);
+
+      // Refresh folder name in case it was first pick
+      if (hasFileSystemAccess()) {
+        const name = await getBaseFolderName();
+        setBaseFolderName(name);
+      }
+
+      // Clear progress after a delay
+      setTimeout(() => {
+        setIsSaving(false);
+        setSaveProgress('');
+        setSaveProgressPercent(0);
+      }, 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Save failed');
+      setIsSaving(false);
+      setSaveProgress('');
+      setSaveProgressPercent(0);
     }
   };
 
@@ -482,7 +566,7 @@ export function CVTailorPage() {
         <div className="lg:col-span-2">
           {cvData ? (
             <div className="space-y-4">
-              {/* Template Selector + Download */}
+              {/* Template Selector + Actions */}
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <TemplateSelector
@@ -499,16 +583,60 @@ export function CVTailorPage() {
                   </svg>
                   Download .docx
                 </button>
+                <button
+                  onClick={handleSavePackage}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                  Save Package
+                </button>
               </div>
+
+              {/* Save progress + folder indicator */}
+              {(isSaving || (hasFileSystemAccess() && baseFolderName)) && (
+                <div className="flex items-center gap-3 text-sm">
+                  {isSaving ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-purple-600 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${Math.round(saveProgressPercent * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                        {saveProgress}
+                      </span>
+                    </div>
+                  ) : hasFileSystemAccess() && baseFolderName ? (
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                      </svg>
+                      <span>{baseFolderName}</span>
+                      <button
+                        onClick={handleChangeBaseFolder}
+                        className="text-purple-600 dark:text-purple-400 hover:underline text-xs"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              )}
 
               {/* CV Preview */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
                 <div className="overflow-auto max-h-[800px] border border-gray-200 dark:border-gray-700 rounded-xl">
-                  <CVPreview
-                    cvData={cvData}
-                    profile={currentProfile}
-                    selectedTemplate={selectedTemplate}
-                  />
+                  <div ref={cvPreviewRef}>
+                    <CVPreview
+                      cvData={cvData}
+                      profile={currentProfile}
+                      selectedTemplate={selectedTemplate}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -565,6 +693,17 @@ export function CVTailorPage() {
           )}
         </div>
       </div>
+
+      {/* Cover Letter Picker Modal */}
+      {showPicker && currentProfile?.id && (
+        <CoverLetterPicker
+          profileId={currentProfile.id}
+          companyName={companyName}
+          onSelect={handlePickerSelect}
+          onCVOnly={handlePickerCVOnly}
+          onCancel={() => setShowPicker(false)}
+        />
+      )}
     </div>
   );
 }
