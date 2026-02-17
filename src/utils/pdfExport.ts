@@ -1,51 +1,64 @@
 import html2pdf from 'html2pdf.js';
 import { detectLanguage } from './languageDetection';
 
-const PDF_OPTIONS = {
-  margin: [10, 10, 10, 10] as [number, number, number, number],
-  image: { type: 'jpeg' as const, quality: 0.98 },
-  html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
-  jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
-  pagebreak: { mode: ['avoid-all', 'css'] },
-};
+const COLOR_PROPS = [
+  'color', 'background-color', 'border-color',
+  'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
+  'outline-color', 'text-decoration-color',
+];
 
 /**
- * html2canvas cannot parse oklch() colors (used by Tailwind CSS v4).
- * Walk every element in the clone and convert computed oklch values to rgb.
+ * html2canvas has its own CSS parser that cannot handle oklch() (Tailwind v4).
+ * This callback runs inside html2canvas's onclone — after it clones the document
+ * into an iframe but before it renders.
+ *
+ * Step 1: Inline computed (browser-resolved rgb) color values on every element.
+ * Step 2: Replace oklch() in stylesheet text with a safe fallback so the parser
+ *         doesn't throw. The inline styles from step 1 take precedence anyway.
  */
-function convertOklchToRgb(root: HTMLElement): void {
-  const COLOR_PROPS = [
-    'color', 'backgroundColor', 'borderColor',
-    'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
-    'outlineColor', 'textDecorationColor',
-  ];
+function sanitizeColorsForHtml2Canvas(clonedDoc: Document): void {
+  const win = clonedDoc.defaultView;
+  if (!win) return;
 
-  const elements = root.querySelectorAll('*');
-  const all: Element[] = [root, ...Array.from(elements)];
-
-  for (const el of all) {
-    if (!(el instanceof HTMLElement)) continue;
-    const computed = window.getComputedStyle(el);
-    for (const prop of COLOR_PROPS) {
-      const val = computed.getPropertyValue(prop);
-      if (val && val.includes('oklch')) {
-        // The browser already resolved oklch to an internal value.
-        // Reading computed style returns rgb() in most browsers, but
-        // inline styles or CSS variables can still surface oklch().
-        // Force the browser to resolve it by round-tripping through a canvas.
-        try {
-          const ctx = document.createElement('canvas').getContext('2d')!;
-          ctx.fillStyle = val;
-          // ctx.fillStyle normalises any CSS colour to #rrggbb or rgba()
-          el.style.setProperty(prop.replace(/[A-Z]/g, m => `-${m.toLowerCase()}`), ctx.fillStyle);
-        } catch {
-          // If conversion fails, use a safe fallback
-          el.style.setProperty(prop.replace(/[A-Z]/g, m => `-${m.toLowerCase()}`), '#000000');
+  // Step 1 — inline resolved colors on every element
+  const allElements = clonedDoc.body.querySelectorAll('*');
+  for (const el of Array.from(allElements)) {
+    if (!(el instanceof win.HTMLElement)) continue;
+    try {
+      const computed = win.getComputedStyle(el);
+      for (const prop of COLOR_PROPS) {
+        const val = computed.getPropertyValue(prop);
+        if (val) {
+          el.style.setProperty(prop, val);
         }
       }
+    } catch {
+      // skip elements where getComputedStyle fails
+    }
+  }
+
+  // Step 2 — neutralise oklch() in all <style> blocks
+  const styles = clonedDoc.querySelectorAll('style');
+  for (const style of Array.from(styles)) {
+    if (style.textContent && style.textContent.includes('oklch')) {
+      style.textContent = style.textContent.replace(/oklch\([^)]*\)/g, 'rgb(0,0,0)');
     }
   }
 }
+
+const PDF_OPTIONS = {
+  margin: [10, 10, 10, 10] as [number, number, number, number],
+  image: { type: 'jpeg' as const, quality: 0.98 },
+  html2canvas: {
+    scale: 2,
+    useCORS: true,
+    logging: false,
+    backgroundColor: '#ffffff',
+    onclone: (clonedDoc: Document) => sanitizeColorsForHtml2Canvas(clonedDoc),
+  },
+  jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+  pagebreak: { mode: ['avoid-all', 'css'] },
+};
 
 export async function generateCVPDF(cvPreviewElement: HTMLElement): Promise<Blob> {
   const clone = cvPreviewElement.cloneNode(true) as HTMLElement;
@@ -56,9 +69,6 @@ export async function generateCVPDF(cvPreviewElement: HTMLElement): Promise<Blob
   clone.style.left = '-9999px';
   clone.style.top = '0';
   document.body.appendChild(clone);
-
-  // Convert oklch() colours so html2canvas can parse them
-  convertOklchToRgb(clone);
 
   try {
     const blob: Blob = await html2pdf()
