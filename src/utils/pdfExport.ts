@@ -1,48 +1,85 @@
 import html2pdf from 'html2pdf.js';
 import { detectLanguage } from './languageDetection';
 
-const COLOR_PROPS = [
-  'color', 'background-color', 'border-color',
-  'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
-  'outline-color', 'text-decoration-color',
-];
-
-/**
- * html2canvas has its own CSS parser that cannot handle oklch() (Tailwind v4).
- * This callback runs inside html2canvas's onclone — after it clones the document
- * into an iframe but before it renders.
+/* ── oklch → rgb resolution via CSSOM ──────────────────────────────────
  *
- * Step 1: Inline computed (browser-resolved rgb) color values on every element.
- * Step 2: Replace oklch() in stylesheet text with a safe fallback so the parser
- *         doesn't throw. The inline styles from step 1 take precedence anyway.
+ * html2canvas ships its own CSS parser that chokes on oklch() (Tailwind v4).
+ * Previous attempts to fix this via onclone (modifying <style> textContent or
+ * inlining computed styles) failed because html2canvas reads CSS through the
+ * CSSOM API (document.styleSheets → cssRules), NOT from <style> text.
+ *
+ * The fix: before html2pdf runs, walk every CSSStyleRule in every stylesheet,
+ * find property values containing oklch(), resolve them to hex via the canvas
+ * 2d context trick (ctx.fillStyle normalises any CSS color to #rrggbb), and
+ * patch the CSSOM rule in place. After html2pdf finishes, restore originals.
  */
-function sanitizeColorsForHtml2Canvas(clonedDoc: Document): void {
-  const win = clonedDoc.defaultView;
-  if (!win) return;
 
-  // Step 1 — inline resolved colors on every element
-  const allElements = clonedDoc.body.querySelectorAll('*');
-  for (const el of Array.from(allElements)) {
-    if (!(el instanceof win.HTMLElement)) continue;
+type RuleBackup = { rule: CSSStyleRule; prop: string; value: string; priority: string };
+
+/** Use canvas 2d fillStyle to resolve oklch() to hex. */
+function resolveOklchValue(value: string): string {
+  return value.replace(/oklch\([^)]*\)/g, (match) => {
     try {
-      const computed = win.getComputedStyle(el);
-      for (const prop of COLOR_PROPS) {
-        const val = computed.getPropertyValue(prop);
-        if (val) {
-          el.style.setProperty(prop, val);
-        }
-      }
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return '#000000';
+      ctx.fillStyle = '#000000'; // reset
+      ctx.fillStyle = match;     // browser normalises to hex
+      return ctx.fillStyle;
     } catch {
-      // skip elements where getComputedStyle fails
+      return '#000000';
+    }
+  });
+}
+
+/** Recursively walk CSS rules including @layer, @media, @supports groups. */
+function walkCSSRules(rules: CSSRuleList, backups: RuleBackup[]): void {
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i];
+
+    // Recurse into grouping rules (@media, @supports, @layer, etc.)
+    if ('cssRules' in rule && (rule as CSSGroupingRule).cssRules) {
+      walkCSSRules((rule as CSSGroupingRule).cssRules, backups);
+      continue;
+    }
+
+    if (!(rule instanceof CSSStyleRule)) continue;
+
+    const style = rule.style;
+    for (let j = 0; j < style.length; j++) {
+      const prop = style[j];
+      const val = style.getPropertyValue(prop);
+      if (val.includes('oklch')) {
+        const priority = style.getPropertyPriority(prop);
+        backups.push({ rule, prop, value: val, priority });
+        style.setProperty(prop, resolveOklchValue(val), priority);
+      }
     }
   }
+}
 
-  // Step 2 — neutralise oklch() in all <style> blocks
-  const styles = clonedDoc.querySelectorAll('style');
-  for (const style of Array.from(styles)) {
-    if (style.textContent && style.textContent.includes('oklch')) {
-      style.textContent = style.textContent.replace(/oklch\([^)]*\)/g, 'rgb(0,0,0)');
+/** Replace oklch() in all CSSOM rules with resolved hex values. Returns backups for restore. */
+function neutralizeOklchInStylesheets(): RuleBackup[] {
+  const backups: RuleBackup[] = [];
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      walkCSSRules(sheet.cssRules, backups);
+    } catch {
+      // Cross-origin stylesheets throw SecurityError — skip them
     }
+  }
+  console.log(`[PDF] Neutralized ${backups.length} oklch rules in CSSOM`);
+  return backups;
+}
+
+/** Restore original oklch values in CSSOM. */
+function restoreOklch(backups: RuleBackup[]): void {
+  for (const { rule, prop, value, priority } of backups) {
+    try {
+      rule.style.setProperty(prop, value, priority);
+    } catch { /* best effort */ }
   }
 }
 
@@ -54,7 +91,6 @@ const PDF_OPTIONS = {
     useCORS: true,
     logging: false,
     backgroundColor: '#ffffff',
-    onclone: (clonedDoc: Document) => sanitizeColorsForHtml2Canvas(clonedDoc),
   },
   jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
   pagebreak: { mode: ['avoid-all', 'css'] },
@@ -70,6 +106,7 @@ export async function generateCVPDF(cvPreviewElement: HTMLElement): Promise<Blob
   clone.style.top = '0';
   document.body.appendChild(clone);
 
+  const backups = neutralizeOklchInStylesheets();
   try {
     const blob: Blob = await html2pdf()
       .set({ ...PDF_OPTIONS, filename: 'cv.pdf' })
@@ -77,6 +114,7 @@ export async function generateCVPDF(cvPreviewElement: HTMLElement): Promise<Blob
       .outputPdf('blob');
     return blob;
   } finally {
+    restoreOklch(backups);
     document.body.removeChild(clone);
   }
 }
@@ -113,6 +151,7 @@ export async function generateCoverLetterPDF(
   container.innerHTML = html;
   document.body.appendChild(container);
 
+  const backups = neutralizeOklchInStylesheets();
   try {
     const blob: Blob = await html2pdf()
       .set({ ...PDF_OPTIONS, filename: 'cover-letter.pdf' })
@@ -120,6 +159,7 @@ export async function generateCoverLetterPDF(
       .outputPdf('blob');
     return blob;
   } finally {
+    restoreOklch(backups);
     document.body.removeChild(container);
   }
 }
