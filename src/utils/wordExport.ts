@@ -4,7 +4,7 @@ import { detectLanguage } from './languageDetection';
 import type { TailoredCVData, CVTemplate, Profile } from '../types';
 
 export function sanitize(s: string): string {
-  return s.replace(/[^a-zA-Z0-9]/g, '-');
+  return s.replace(/[^a-zA-Z0-9\s]/g, '-').replace(/\s+/g, '-');
 }
 
 export async function generateCoverLetterDocxBlob(

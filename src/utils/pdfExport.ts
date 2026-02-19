@@ -117,19 +117,27 @@ function renderCVHeader(
 ): number {
   let y = MARGIN_TOP;
 
-  // Name
+  // Name (wrap if exceptionally long)
   doc.setFont(font, 'bold');
   doc.setFontSize(18);
   doc.setTextColor(BLACK);
-  doc.text(profile.name, PAGE_W / 2, y, { align: 'center' });
-  y += 6;
+  const nameLines: string[] = doc.splitTextToSize(profile.name, CONTENT_W);
+  for (const line of nameLines) {
+    doc.text(line, PAGE_W / 2, y, { align: 'center' });
+    y += 7;
+  }
+  y -= 1;
 
-  // Headline
+  // Headline (wrap if too long for page width)
   doc.setFont(font, 'normal');
   doc.setFontSize(10.5);
   doc.setTextColor(DARK_GRAY);
-  doc.text(headline, PAGE_W / 2, y, { align: 'center' });
-  y += 5;
+  const headlineLines: string[] = doc.splitTextToSize(headline, CONTENT_W);
+  for (const line of headlineLines) {
+    doc.text(line, PAGE_W / 2, y, { align: 'center' });
+    y += 4.5;
+  }
+  y += 0.5;
 
   // Contact info
   const contactParts = [profile.phone, profile.email, profile.location].filter(Boolean);
