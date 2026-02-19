@@ -46,7 +46,6 @@ export function CVTailorPage() {
   const [selectedJobKey, setSelectedJobKey] = useState<string | null>(null);
 
   // Save package state
-  const cvPreviewRef = useRef<HTMLDivElement>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [matchedLetters, setMatchedLetters] = useState<CoverLetter[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -296,11 +295,7 @@ export function CVTailorPage() {
   };
 
   const executeSave = async (coverLetter: CoverLetter | undefined) => {
-    console.log('[UI] executeSave called. cvData:', !!cvData, 'currentProfile:', !!currentProfile, 'cvPreviewRef:', !!cvPreviewRef.current, 'dirHandle:', !!dirHandleRef.current);
-    if (!cvData || !currentProfile || !cvPreviewRef.current) {
-      console.error('[UI] executeSave ABORTED: missing', !cvData ? 'cvData' : '', !currentProfile ? 'currentProfile' : '', !cvPreviewRef.current ? 'cvPreviewRef' : '');
-      return;
-    }
+    if (!cvData || !currentProfile) return;
 
     setIsSaving(true);
     setSaveProgress('Starting...');
@@ -315,7 +310,6 @@ export function CVTailorPage() {
           jobTitle,
           companyName,
           coverLetter,
-          cvPreviewElement: cvPreviewRef.current,
         },
         (step, progress) => {
           setSaveProgress(step);
@@ -872,7 +866,7 @@ export function CVTailorPage() {
               {/* CV Preview */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
                 <div className="overflow-auto max-h-[800px] border border-gray-200 dark:border-gray-700 rounded-xl">
-                  <div ref={cvPreviewRef}>
+                  <div>
                     <CVPreview
                       cvData={cvData}
                       profile={currentProfile}

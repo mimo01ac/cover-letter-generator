@@ -14,7 +14,6 @@ export interface SavePackageParams {
   jobTitle: string;
   companyName: string;
   coverLetter?: CoverLetter;
-  cvPreviewElement: HTMLElement;
 }
 
 export type ProgressCallback = (step: string, progress: number) => void;
@@ -139,7 +138,7 @@ export async function saveApplicationPackage(
   onProgress?: ProgressCallback,
   dirHandle?: FileSystemDirectoryHandle
 ): Promise<{ folderName: string; fileCount: number; method: 'folder' | 'zip'; warning?: string; pdfSkipped?: boolean }> {
-  const { cvData, profile, template, jobTitle, companyName, coverLetter, cvPreviewElement } = params;
+  const { cvData, profile, template, jobTitle, companyName, coverLetter } = params;
   const userName = sanitize(profile.name);
   const position = sanitize(jobTitle);
   const folderName = buildFolderName(companyName || jobTitle, jobTitle);
@@ -160,9 +159,10 @@ export async function saveApplicationPackage(
   let cvPdfBlob: Blob | undefined;
   let pdfSkipped = false;
   try {
-    cvPdfBlob = await generateCVPDF(cvPreviewElement);
+    cvPdfBlob = await generateCVPDF(cvData, profile, template);
+    console.log('[SavePackage] CV PDF blob:', cvPdfBlob?.size, 'bytes');
   } catch (pdfErr) {
-    console.warn('[SavePackage] CV PDF generation failed (oklch?):', pdfErr);
+    console.error('[SavePackage] CV PDF generation failed:', pdfErr);
     pdfSkipped = true;
   }
 
