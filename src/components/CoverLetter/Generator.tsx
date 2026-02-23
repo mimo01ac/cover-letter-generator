@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../stores/useStore';
-import { generateCoverLetter } from '../../services/claude';
+import { generateCoverLetter, extractJobDetails } from '../../services/claude';
 import { saveCoverLetter, getAllProfiles, getDocumentsByProfile } from '../../services/db';
 import { ChatRefinement } from './ChatRefinement';
 import { FeedbackAnalysis } from './FeedbackAnalysis';
@@ -65,6 +65,8 @@ export function Generator() {
   const [feedback, setFeedback] = useState<CoverLetterFeedback | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isJobDetailsOpen, setIsJobDetailsOpen] = useState(true);
+  const [isExtractingDetails, setIsExtractingDetails] = useState(false);
+  const isPasteRef = useRef(false);
 
   useEffect(() => {
     loadData();
@@ -103,7 +105,9 @@ export function Generator() {
     }
   };
 
-  const handleJobDescriptionChange = (value: string) => {
+  const handleJobDescriptionChange = async (value: string) => {
+    const wasPaste = isPasteRef.current;
+    isPasteRef.current = false;
     setJobDescription(value);
 
     // Detect language when job description is provided
@@ -111,6 +115,16 @@ export function Generator() {
       const detected = detectLanguage(value);
       setDetectedLanguage(detected);
       setLanguage(detected);
+    }
+
+    // Auto-extract job title & company on paste when fields are empty
+    if (wasPaste && value.trim().length > 50 && !jobTitle && !companyName) {
+      setIsExtractingDetails(true);
+      const details = await extractJobDetails(value);
+      // Only fill fields that are still empty (user may have typed while waiting)
+      if (details.jobTitle) setJobTitle(prev => prev || details.jobTitle);
+      if (details.companyName) setCompanyName(prev => prev || details.companyName);
+      setIsExtractingDetails(false);
     }
   };
 
@@ -383,8 +397,8 @@ export function Generator() {
                     type="text"
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                    placeholder="Senior Software Engineer"
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white${isExtractingDetails && !jobTitle ? ' animate-pulse bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    placeholder={isExtractingDetails ? 'Detecting from job description...' : 'Senior Software Engineer'}
                   />
                 </div>
 
@@ -396,8 +410,8 @@ export function Generator() {
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                    placeholder="Acme Inc."
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white${isExtractingDetails && !companyName ? ' animate-pulse bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    placeholder={isExtractingDetails ? 'Detecting from job description...' : 'Acme Inc.'}
                   />
                 </div>
 
@@ -408,6 +422,7 @@ export function Generator() {
                   <textarea
                     value={jobDescription}
                     onChange={(e) => handleJobDescriptionChange(e.target.value)}
+                    onPaste={() => { isPasteRef.current = true; }}
                     rows={8}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
                     placeholder="Paste the full job description here..."

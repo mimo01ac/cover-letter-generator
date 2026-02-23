@@ -136,3 +136,23 @@ export async function refineCoverLetter(
   const data = await response.json();
   return data.content || '';
 }
+
+export async function extractJobDetails(
+  jobDescription: string
+): Promise<{ jobTitle: string; companyName: string }> {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch('/api/extract-job-details', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ jobDescription }),
+    });
+    if (!response.ok) return { jobTitle: '', companyName: '' };
+    return await response.json();
+  } catch {
+    return { jobTitle: '', companyName: '' };
+  }
+}
