@@ -142,13 +142,13 @@ export async function extractJobDetails(
 ): Promise<{ jobTitle: string; companyName: string }> {
   try {
     const token = await getAuthToken();
-    const response = await fetch('/api/extract-job-details', {
+    const response = await fetch('/api/cover-letter/analyze', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ jobDescription }),
+      body: JSON.stringify({ action: 'extract-details', jobDescription }),
     });
     if (!response.ok) return { jobTitle: '', companyName: '' };
     return await response.json();

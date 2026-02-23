@@ -58,6 +58,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Route by action
+  const { action } = req.body as { action?: string };
+  if (action === 'extract-details') {
+    return handleExtractDetails(req, res, anthropicKey);
+  }
+
   const body = req.body as AnalyzeRequest;
   const { coverLetter, jobDescription, jobTitle, language = 'da' } = body;
 
@@ -119,5 +125,36 @@ ${jobDescription}`;
   } catch (error) {
     console.error('Claude API error:', error);
     return res.status(500).json({ error: 'Analysis failed' });
+  }
+}
+
+async function handleExtractDetails(req: VercelRequest, res: VercelResponse, anthropicKey: string) {
+  const { jobDescription } = req.body as { jobDescription?: string };
+  if (!jobDescription || jobDescription.trim().length < 50) {
+    return res.json({ jobTitle: '', companyName: '' });
+  }
+
+  try {
+    const anthropic = new Anthropic({ apiKey: anthropicKey });
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      system: 'Extract the job title and company name from the job posting below. Return ONLY valid JSON: {"jobTitle": "...", "companyName": "..."}. If either cannot be determined, use an empty string.',
+      messages: [{ role: 'user', content: jobDescription.slice(0, 3000) }],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+      return res.json({ jobTitle: '', companyName: '' });
+    }
+
+    const parsed = JSON.parse(match[0]);
+    return res.json({
+      jobTitle: typeof parsed.jobTitle === 'string' ? parsed.jobTitle : '',
+      companyName: typeof parsed.companyName === 'string' ? parsed.companyName : '',
+    });
+  } catch {
+    return res.json({ jobTitle: '', companyName: '' });
   }
 }
