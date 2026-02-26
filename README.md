@@ -1,90 +1,119 @@
 # Cover Letter Generator
 
-A React web application for creating personalized cover letters using AI. Features profile management, CV upload, AI-powered cover letter generation with anti-hallucination safeguards, feedback analysis, and an AI phone interview feature.
+An AI-powered job application toolkit that generates tailored cover letters, CVs, interview preparation packs, and conducts mock phone interviews — all from your profile and uploaded documents.
+
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Deployment](#deployment)
+- [Security](#security)
+- [Available Scripts](#available-scripts)
+- [Troubleshooting](#troubleshooting)
 
 ## Features
 
-- **Profile Management**: Store your personal information and upload documents (CV, experience notes)
-- **AI Cover Letter Generation**: Uses Anthropic's Claude API with streaming responses
-- **Executive Summary Generation**: Automatically generates a tailored CV executive summary alongside each cover letter
-- **Summary Refinement**: Chat interface with quick actions to iteratively refine your executive summary
-- **Anti-Hallucination System**: Pre-extracts verified facts from your documents to prevent fabricated claims
-- **Feedback Analysis**: Automatic match score, improvement suggestions, and keyword analysis
-- **Iterative Refinement**: Chat interface to refine the generated letter with follow-up requests
-- **Job URL Scraping**: Automatically extract job descriptions from URLs (supports jobindex.dk and other public job postings)
-- **AI Phone Interview**: Vapi.ai-powered phone interviews that analyze your CV and generate personalized insights
-- **Multi-language Support**: Detects Danish/English and generates appropriate cover letters
-- **Secure Authentication**: Email/password authentication via Supabase Auth with password reset
-- **Cloud Storage**: All data securely stored in Supabase PostgreSQL with Row Level Security
+### Cover Letter Generation
+- AI-generated cover letters using Anthropic Claude with streaming responses
+- Executive summary generation alongside each cover letter
+- Anti-hallucination system that pre-extracts verified facts from your documents
+- Feedback analysis with match score, improvement suggestions, and keyword analysis
+- Chat-based refinement for both cover letters and executive summaries
+- Multi-language support (Danish/English auto-detection)
+
+### CV Tailoring
+- AI-tailored CVs matched to specific job descriptions
+- Three templates: Classic, Hybrid, Executive
+- PDF export via jsPDF direct text API
+- Save application packages (CV + cover letter + job listing) to local folder or ZIP
+
+### Interview Preparation
+- Company research with mission, values, culture, news, and competitive landscape
+- 12–15 tailored interview questions with suggested answers
+- STAR-format talking points drawn from your experience documents
+- Audio briefing (podcast-style) for on-the-go preparation
+
+### Mock Interview
+- AI recruiter "Alex" calls you for a realistic phone screen via Vapi.ai
+- Uses company research, interview questions, and your CV to stay in character
+- Digs deeper on vague answers, asks for metrics and specifics
+- Post-call feedback report: overall score, 5 category scores (Communication, Technical, Cultural Fit, Problem-Solving, Pressure Handling), per-question breakdown with suggested better answers, strengths, improvement areas, and action items
+- Multiple attempts tracked per briefing
+
+### General
+- Profile management with document uploads (CV, experience notes)
+- Job URL scraping (auto-extract job descriptions from URLs)
+- Secure email/password authentication via Supabase Auth
+- Cloud storage with Row Level Security in Supabase PostgreSQL
 
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Vite 7
 - **Styling**: Tailwind CSS 4
 - **State Management**: Zustand
-- **Database**: Supabase (PostgreSQL)
+- **Database**: Supabase (PostgreSQL with RLS)
 - **Authentication**: Supabase Auth (email/password with password reset)
-- **Backend**: Vercel Serverless Functions
+- **Backend**: Vercel Serverless Functions (12/12 Hobby plan limit)
 - **AI**: Anthropic Claude API (server-side)
-  - Claude 3.5 Haiku for fact extraction
-  - Claude Sonnet 4 for cover letter generation
-- **Voice Interview**: Vapi.ai (server-side)
+  - Claude Haiku 4.5 for fact extraction and job detail parsing
+  - Claude Sonnet 4 for generation (cover letters, CVs, interview prep, feedback)
+- **Voice**: Vapi.ai with Deepgram transcription and ElevenLabs TTS
+- **PDF**: jsPDF direct text API (not html2canvas — oklch colors crash it)
 
 ## Architecture
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   React App     │────▶│  Vercel API     │────▶│   Anthropic     │
-│   (Frontend)    │     │  (Serverless)   │     │   Claude API    │
+│   React SPA     │────▶│  Vercel API     │────▶│   Anthropic     │
+│   (Vite)        │     │  (12 functions) │     │   Claude API    │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
         │                       │
-        │                       │
-        ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐
-│  Supabase Auth  │     │   Vapi.ai       │
-│  (JWT tokens)   │     │   (Phone API)   │
-└─────────────────┘     └─────────────────┘
-        │
-        ▼
-┌─────────────────┐
-│   Supabase      │
-│   PostgreSQL    │
-│   (with RLS)    │
-└─────────────────┘
+        │                       ├──────────────▶┌─────────────────┐
+        ▼                       │               │   Vapi.ai       │
+┌─────────────────┐             │               │  (Phone + TTS)  │
+│  Supabase Auth  │             │               └─────────────────┘
+│  (JWT tokens)   │             │
+└─────────────────┘             ▼
+        │               ┌─────────────────┐
+        └──────────────▶│   Supabase      │
+                        │   PostgreSQL    │
+                        │   (with RLS)    │
+                        └─────────────────┘
 ```
 
-## Installation
+## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- npm or yarn
+- npm
 - Supabase account
 - Vercel account (for deployment)
 - Anthropic API key
-- Vapi.ai API key (optional, for phone interviews)
+- Vapi.ai API key and phone number ID (optional, for phone interviews and mock interviews)
 
 ### Local Development
 
 ```bash
-# Clone the repository
 git clone https://github.com/mimo01ac/cover-letter-generator.git
 cd cover-letter-generator
-
-# Install dependencies
 npm install
 
-# Create .env.local file (see Environment Variables section)
+# Create .env file with Supabase credentials (see Environment Variables)
 
-# Start development server
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+The app will be available at `http://localhost:5173`.
 
 ## Environment Variables
 
-### Frontend (.env.local)
+### Frontend (`.env`)
 
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -93,174 +122,172 @@ VITE_SUPABASE_ANON_KEY=eyJ...
 
 ### Vercel (Server-side)
 
-Set these in Vercel dashboard under Environment Variables:
+Set these in the Vercel dashboard under Environment Variables:
 
 ```
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=eyJ...
 ANTHROPIC_API_KEY=sk-ant-...
-VAPI_API_KEY=...              (optional)
-VAPI_PHONE_NUMBER_ID=...      (optional)
+VAPI_API_KEY=...              # Required for phone interviews / mock interviews
+VAPI_PHONE_NUMBER_ID=...      # Required for phone interviews / mock interviews
 ```
+
+## Usage
+
+1. **Sign up** with email and password
+2. **Create a profile** and upload your CV and experience documents
+3. **Generate a cover letter**: paste a job URL or description, click Generate
+4. **Review feedback**: match score, suggestions, and keyword gaps
+5. **Refine**: use the chat interface to tweak the letter or executive summary
+6. **Tailor your CV**: go to CV Tailor, select a job, choose a template, generate
+7. **Save application package**: download CV + cover letter + job listing as folder or ZIP
+8. **Prepare for interview**: go to Interview Prep, generate a briefing pack (company research, questions, STAR stories, audio)
+9. **Mock interview**: click the Mock Interview tab, enter your phone number, and receive a realistic phone screen from an AI recruiter — get a detailed performance report afterward
+
+## Project Structure
+
+```
+├── api/                              # Vercel serverless functions (12/12)
+│   ├── cover-letter/
+│   │   ├── generate.ts               # Generate cover letter + summary (streaming)
+│   │   └── analyze.ts                # Feedback analysis + job detail extraction
+│   ├── cover-letter-refine.ts        # Refine letter/summary via chat (streaming)
+│   ├── cv-tailor.ts                  # CV generation + refinement (query action)
+│   ├── interview-prep/
+│   │   ├── generate.ts               # Generate briefing, questions, talking points
+│   │   ├── refine.ts                 # Refine interview prep content
+│   │   ├── research.ts               # Company/industry research
+│   │   └── generate-audio.ts         # Audio briefing generation
+│   └── interview/
+│       ├── generate-guide.ts         # Generate interview guide (career interview)
+│       ├── start-call.ts             # Start Vapi call (career or mock mode)
+│       ├── call-status.ts            # Poll call status
+│       └── process-transcript.ts     # Process transcript (insights or feedback)
+├── supabase/
+│   └── schema.sql                    # Database schema with RLS policies
+├── src/
+│   ├── components/
+│   │   ├── Auth/                     # Login, signup, forgot/reset password
+│   │   ├── Layout/                   # App shell, navigation sidebar
+│   │   ├── Profile/                  # Profile form, document upload, career interview
+│   │   ├── CoverLetter/              # Generation, refinement, history, feedback
+│   │   ├── CVTailor/                 # CV tailoring, template preview, save package
+│   │   ├── InterviewPrep/            # Briefing, questions, stories, audio, mock interview
+│   │   └── Settings/                 # Account settings
+│   ├── contexts/
+│   │   └── AuthContext.tsx            # Supabase auth context provider
+│   ├── lib/
+│   │   ├── supabase.ts               # Supabase client
+│   │   └── database.types.ts         # Generated DB types
+│   ├── services/
+│   │   ├── claude.ts                 # Claude API client (streaming)
+│   │   ├── cvTailor.ts               # CV tailoring service
+│   │   ├── db.ts                     # Supabase CRUD operations
+│   │   ├── documentParser.ts         # Parse uploaded documents
+│   │   ├── feedbackAnalyzer.ts       # Cover letter analysis
+│   │   ├── interviewGuideCache.ts    # Interview guide caching
+│   │   ├── interviewPrep.ts          # Interview prep generation
+│   │   ├── jobScraper.ts             # URL scraping + job detail extraction
+│   │   └── vapiInterview.ts          # Vapi.ai integration (career + mock modes)
+│   ├── stores/
+│   │   └── useStore.ts               # Zustand store (UI state)
+│   ├── types/
+│   │   └── index.ts                  # TypeScript interfaces
+│   └── utils/
+│       ├── applicationPackage.ts     # Save package (folder/ZIP)
+│       └── pdfExport.ts              # jsPDF CV export
+├── vercel.json                       # Vercel config (rewrites, function limits)
+└── .env.example                      # Environment variable template
+```
+
+### Routes
+
+| Path | Page | Description |
+|------|------|-------------|
+| `/` | Cover Letter | Generate and refine cover letters |
+| `/cv-tailor` | CV Tailor | Tailor CVs to job descriptions |
+| `/interview-prep` | Interview Prep | Briefing, questions, stories, audio, mock interview |
+| `/profile` | Profile | Manage profile and upload documents |
+| `/history` | History | View past cover letters |
+| `/settings` | Settings | Account settings |
+| `/reset-password` | Reset Password | Password reset flow (public) |
 
 ## Deployment
 
 ### 1. Supabase Setup
 
 1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run the schema from `supabase/schema.sql`
+2. Run `supabase/schema.sql` in the SQL Editor
 3. Copy your project URL and anon key from Settings > API
 
 ### 2. Vercel Setup
 
-1. Import your GitHub repository at [vercel.com](https://vercel.com)
-2. Add environment variables (see above)
-3. Deploy
+1. Import the GitHub repository at [vercel.com](https://vercel.com)
+2. Add all environment variables (see above)
+3. Deploy — Vercel auto-builds on push to `main`
 
-### 3. Configure Authentication
+**Important**: The Vercel Hobby plan allows 12 serverless functions max. The project is at exactly 12. New API endpoints must be consolidated into existing ones using query parameters or request body routing.
 
-1. In Supabase dashboard, go to Authentication > Providers
-2. Ensure Email provider is enabled
-3. Optionally disable email confirmation for testing
-4. Customize email templates (Auth > Email Templates) to brand your password reset emails
+### 3. Authentication
 
-## Usage
-
-1. **Create an account**: Sign up with email and password
-
-2. **Set up your profile**: Go to Profile and fill in your information (click "Create Profile to Continue")
-
-3. **Upload documents**: Upload your CV and any relevant experience documents
-
-4. **Generate a cover letter**:
-   - Go to the Generate page
-   - Enter a job URL or paste the job description
-   - Optionally add custom notes for the AI
-   - Click "Generate Cover Letter"
-
-5. **Review feedback**: See your match score and improvement suggestions
-
-6. **Refine your letter**: Use the chat interface to make adjustments
-
-7. **Refine your executive summary**: Use quick actions or custom requests to perfect your CV summary
-
-7. **AI Interview** (optional): Start an AI phone interview for deeper insights
-
-8. **Reset password**: Click "Forgot password?" on the login page if needed
-
-## Project Structure
-
-```
-├── api/                           # Vercel serverless functions
-│   ├── cover-letter/
-│   │   ├── generate.ts            # Generate cover letter + summary (streaming) + fact extraction
-│   │   ├── refine.ts              # Refine letter via chat (streaming)
-│   │   ├── refine-summary.ts      # Refine executive summary via chat (streaming)
-│   │   └── analyze.ts             # Feedback analysis
-│   └── interview/
-│       ├── generate-guide.ts      # Generate interview guide
-│       ├── start-call.ts          # Start Vapi phone call
-│       ├── call-status.ts         # Poll call status
-│       └── process-transcript.ts  # Process interview transcript
-├── supabase/
-│   └── schema.sql                 # Database schema with RLS policies
-├── src/
-│   ├── components/
-│   │   ├── Auth/                  # Login/signup/forgot password/reset password
-│   │   ├── Layout/                # App shell, navigation
-│   │   ├── Profile/               # Profile form, document upload, interview
-│   │   ├── CoverLetter/           # Generation, refinement, summary refinement, history, feedback
-│   │   └── Settings/              # Account settings
-│   ├── contexts/
-│   │   └── AuthContext.tsx        # Supabase auth context
-│   ├── lib/
-│   │   ├── supabase.ts            # Supabase client
-│   │   └── database.types.ts      # TypeScript types for DB
-│   ├── services/
-│   │   ├── claude.ts              # Claude API client
-│   │   ├── db.ts                  # Supabase database operations
-│   │   ├── feedbackAnalyzer.ts    # Analysis client
-│   │   ├── jobScraper.ts          # URL scraping
-│   │   └── vapiInterview.ts       # Vapi client
-│   ├── stores/
-│   │   └── useStore.ts            # Zustand state (UI state)
-│   └── types/
-│       └── index.ts               # TypeScript interfaces
-└── vercel.json                    # Vercel configuration
-```
+1. In Supabase dashboard: Authentication > Providers > enable Email
+2. Optionally disable email confirmation for testing
+3. Customize email templates under Auth > Email Templates
 
 ## Security
 
-- **API Keys**: All API keys (Anthropic, Vapi) are stored server-side only
-- **Authentication**: JWT-based sessions via Supabase Auth with password reset support
-- **Data Isolation**: Row Level Security ensures users only access their own data
-- **Anti-Hallucination**: Fact extraction prevents fabricated claims in cover letters
-- **No Indexing**: Site is configured with noindex/nofollow meta tags
+- **API keys**: Anthropic and Vapi keys are server-side only (Vercel env vars)
+- **Authentication**: JWT sessions via Supabase Auth
+- **Data isolation**: Row Level Security on all tables — users only see their own data
+- **Anti-hallucination**: Fact extraction prevents fabricated claims in cover letters
+- **No indexing**: Site uses noindex/nofollow meta tags
 
-## Anti-Hallucination System
+### Anti-Hallucination System
 
-The cover letter generator includes safeguards against AI hallucinations:
+Before generating a cover letter, Claude Haiku extracts a verified fact inventory from your documents:
+- Skills (confidence: explicit / demonstrated / mentioned)
+- Achievements (with exact metrics only if present in source)
+- Credentials (degrees, certifications, job titles)
+- Companies
 
-1. **Fact Extraction**: Before generating, Claude Haiku extracts verified facts from your documents:
-   - Skills (with confidence levels: explicit/demonstrated/mentioned)
-   - Achievements (with exact metrics only if present)
-   - Credentials (degrees, certifications, job titles)
-   - Companies worked at
-
-2. **Strict Claim Rules**: The generation prompt enforces:
-   - Every skill claim must exist in the fact inventory
-   - No fabricated metrics or percentages
-   - No superlatives ("expert", "extensive") without supporting evidence
-   - No degrees or certifications not in your documents
-
-3. **Cost**: ~$0.001 per extraction (~5% increase in API costs)
+The generation prompt enforces that every claim maps to this inventory. No fabricated metrics, no unsupported superlatives, no invented credentials.
 
 ## Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server on port 5173 |
+| `npm run build` | Type-check (`tsc -b`) then build for production |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Preview production build locally |
 
 ## Troubleshooting
 
 ### Authentication Issues
-
-If you can't sign in:
-1. Check that Supabase URL and anon key are correct in `.env.local`
-2. Ensure the Email provider is enabled in Supabase Auth settings
-3. Check browser console for specific error messages
-
-### Forgot Password Not Working
-
-1. Check that the password reset email template is configured in Supabase
-2. Verify the redirect URL in AuthContext.tsx matches your domain
-3. Check spam folder for reset emails
+1. Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env`
+2. Ensure Email provider is enabled in Supabase Auth settings
+3. Check browser console for errors
 
 ### Cover Letter Generation Fails
+1. Verify `ANTHROPIC_API_KEY` is set in Vercel
+2. Check Vercel function logs
+3. Ensure Anthropic account has credits
 
-1. Verify `ANTHROPIC_API_KEY` is set correctly in Vercel
-2. Check Vercel function logs for errors
-3. Ensure you have credits on your Anthropic account
-
-### Interview Feature Not Working
-
+### Mock Interview / Phone Interview Not Working
 1. Verify `VAPI_API_KEY` and `VAPI_PHONE_NUMBER_ID` are set in Vercel
 2. International calls require a paid Vapi phone number
-3. Check Vercel function logs for specific errors
+3. Mock interview requires a briefing to be generated first
+4. Check Vercel function logs for errors
+
+### PDF Export Issues
+- PDF generation uses jsPDF text API, not html2canvas (oklch colors crash it)
+- If CV PDF looks wrong, check that `TailoredCVData` has the expected structure
 
 ### Profile/Document Save Fails
-
-1. Ensure you've created a profile before uploading documents
-2. Check browser console for Supabase error messages
-3. Verify the schema has been applied in Supabase SQL Editor
-
-### PDF Parsing Issues
-
-If PDF text extraction fails:
-1. Copy and paste the text directly from your PDF
-2. Save your CV as a `.txt` file first
-3. Use the "Paste Text" option instead of file upload
+1. Create a profile before uploading documents
+2. Check browser console for Supabase errors
+3. Verify the schema has been applied in Supabase
 
 ## License
 
-Private - All rights reserved
+Private — All rights reserved
