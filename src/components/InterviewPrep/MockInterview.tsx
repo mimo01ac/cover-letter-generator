@@ -36,8 +36,8 @@ export function MockInterview({
   const [state, setState] = useState<MockInterviewState>('ready');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
-  const [callId, setCallId] = useState<string | null>(null);
-  const [interviewId, setInterviewId] = useState<string | null>(null);
+  const [, setCallId] = useState<string | null>(null);
+  const [, setInterviewId] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [feedback, setFeedback] = useState<MockInterviewFeedback | null>(null);
   const [pastAttempts, setPastAttempts] = useState<InterviewResult[]>([]);

@@ -165,7 +165,7 @@ export function InterviewModal({
               profileId: profile.id!,
               name: `Interview Insights - ${new Date().toLocaleDateString()}`,
               type: 'experience',
-              content: insights,
+              content: insights || '',
             });
 
             setStep('completed');

@@ -83,7 +83,7 @@ Remember: The goal is to uncover stories and details that aren't in their CV - t
 }
 
 export function buildMockInterviewPrompt(
-  profileName: string,
+  _profileName: string,
   companyName: string,
   jobTitle: string,
   briefing: InterviewBriefing,
