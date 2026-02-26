@@ -309,6 +309,7 @@ export function CVTailorPage() {
           template: selectedTemplate,
           jobTitle,
           companyName,
+          jobDescription,
           coverLetter,
         },
         (step, progress) => {

@@ -2,7 +2,7 @@ import { get, set, del } from 'idb-keyval';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { generateCoverLetterDocxBlob, generateTailoredCVDocxBlob, sanitize } from './wordExport';
-import { generateCVPDF, generateCoverLetterPDF } from './pdfExport';
+import { generateCVPDF, generateCoverLetterPDF, generateJobListingPDF } from './pdfExport';
 import type { TailoredCVData, CVTemplate, Profile, CoverLetter } from '../types';
 
 const DIR_HANDLE_KEY = 'application-package-dir-handle';
@@ -13,6 +13,7 @@ export interface SavePackageParams {
   template: CVTemplate;
   jobTitle: string;
   companyName: string;
+  jobDescription: string;
   coverLetter?: CoverLetter;
 }
 
@@ -138,12 +139,13 @@ export async function saveApplicationPackage(
   onProgress?: ProgressCallback,
   dirHandle?: FileSystemDirectoryHandle
 ): Promise<{ folderName: string; fileCount: number; method: 'folder' | 'zip'; warning?: string; pdfSkipped?: boolean }> {
-  const { cvData, profile, template, jobTitle, companyName, coverLetter } = params;
+  const { cvData, profile, template, jobTitle, companyName, jobDescription, coverLetter } = params;
   const userName = sanitize(profile.name);
   const position = sanitize(jobTitle);
   const folderName = buildFolderName(companyName || jobTitle, jobTitle);
   const includeCoverLetter = !!coverLetter;
-  const totalSteps = includeCoverLetter ? 5 : 3;
+  const hasJobDescription = jobDescription.trim().length > 0;
+  const totalSteps = (includeCoverLetter ? 5 : 3) + (hasJobDescription ? 1 : 0);
   let step = 0;
 
   const report = (msg: string) => {
@@ -185,6 +187,17 @@ export async function saveApplicationPackage(
     }
   }
 
+  // Generate job listing PDF
+  let jobListingPdfBlob: Blob | undefined;
+  if (hasJobDescription) {
+    report('Generating Job Listing PDF...');
+    try {
+      jobListingPdfBlob = await generateJobListingPDF(jobDescription, jobTitle, companyName);
+    } catch (err) {
+      console.warn('[SavePackage] Job listing PDF generation failed:', err);
+    }
+  }
+
   // Build file list
   const files: Array<{ name: string; blob: Blob }> = [
     { name: `CV-${userName}.docx`, blob: cvDocxBlob },
@@ -199,6 +212,10 @@ export async function saveApplicationPackage(
   }
   if (clPdfBlob) {
     files.push({ name: `Cover-Letter-${position}.pdf`, blob: clPdfBlob });
+  }
+
+  if (jobListingPdfBlob) {
+    files.push({ name: `Job-Listing-${position}.pdf`, blob: jobListingPdfBlob });
   }
 
   report('Saving files...');

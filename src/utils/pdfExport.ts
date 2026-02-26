@@ -421,6 +421,63 @@ export async function generateCVPDF(
   return doc.output('blob');
 }
 
+export async function generateJobListingPDF(
+  jobDescription: string,
+  jobTitle: string,
+  companyName?: string
+): Promise<Blob> {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  let y = MARGIN_TOP + 5;
+
+  // Heading
+  const heading = companyName
+    ? `${jobTitle} — ${companyName}`
+    : jobTitle;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(BLACK);
+  const headingLines: string[] = doc.splitTextToSize(heading, CONTENT_W);
+  for (const line of headingLines) {
+    doc.text(line, MARGIN_X, y);
+    y += 6;
+  }
+  y += 1;
+
+  // Subheading
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(GRAY);
+  doc.text('Job listing saved for reference', MARGIN_X, y);
+  y += 6;
+
+  y = drawHR(doc, y);
+  y += 4;
+
+  // Body — preserve paragraph breaks
+  const paragraphs = jobDescription
+    .split(/\n{2,}/)
+    .filter(p => p.trim().length > 0);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(BLACK);
+
+  for (const para of paragraphs) {
+    // Split on single newlines to preserve list-like formatting
+    const lines = para.split('\n');
+    for (const rawLine of lines) {
+      const trimmed = rawLine.trim();
+      if (!trimmed) continue;
+      y = renderWrappedText(doc, trimmed, MARGIN_X, y, CONTENT_W, 4.5);
+      y += 1;
+    }
+    y += 2; // paragraph spacing
+  }
+
+  return doc.output('blob');
+}
+
 export async function generateCoverLetterPDF(
   coverLetterText: string,
   jobTitle: string,
