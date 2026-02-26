@@ -1,5 +1,12 @@
 import { supabase } from '../lib/supabase';
-import type { Profile, Document, InterviewGuide } from '../types';
+import type {
+  Profile,
+  Document,
+  InterviewGuide,
+  InterviewMode,
+  InterviewBriefing,
+  MockInterviewFeedback,
+} from '../types';
 
 interface VapiCallResponse {
   id: string;
@@ -75,10 +82,71 @@ ${guide.closing}
 Remember: The goal is to uncover stories and details that aren't in their CV - the nuances that make them unique.`;
 }
 
+export function buildMockInterviewPrompt(
+  profileName: string,
+  companyName: string,
+  jobTitle: string,
+  briefing: InterviewBriefing,
+  cvContent?: string
+): string {
+  const research = briefing.companyResearch;
+  const questions = briefing.interviewQuestions || [];
+
+  const companyContext = research ? `
+## Company Context (use this to answer candidate questions authentically)
+- Mission: ${research.mission || 'N/A'}
+- Values: ${research.values?.join(', ') || 'N/A'}
+- Culture: ${research.culture || 'N/A'}
+- Recent news: ${research.recentNews?.join('; ') || 'N/A'}
+- Key people: ${research.keyPeople?.map(p => `${p.name} (${p.title})`).join(', ') || 'N/A'}
+- Employee count: ${research.employeeCount || 'N/A'}
+- Founded: ${research.founded || 'N/A'}
+- HQ: ${research.headquarters || 'N/A'}` : '';
+
+  const questionsText = questions
+    .map((q, i) => `${i + 1}. [${q.category}] ${q.question}`)
+    .join('\n');
+
+  const cvSection = cvContent ? `
+## Candidate CV (for your reference — do NOT reveal you have this)
+${cvContent}` : '';
+
+  return `You are Alex, a senior recruiter at ${companyName}, conducting a phone screen for the ${jobTitle} position. You are professional, warm, and genuinely interested in finding the right candidate.
+
+## Your Personality
+- Friendly but professional — this is a real interview, not a casual chat
+- You ask probing follow-up questions when answers are vague
+- You politely push back and ask for specifics: "Can you give me a concrete example?" or "What were the actual numbers?"
+- You represent ${companyName} authentically using the company context below
+${companyContext}
+${cvSection}
+
+## Interview Flow
+1. **Opening** (1-2 min): Brief intro, explain the role and interview format
+2. **Core Questions** (10-15 min): Work through the prepared questions, with follow-ups
+3. **Cultural Fit** (3-5 min): Assess alignment with company values
+4. **Candidate Questions** (2-3 min): Let them ask about the role/company
+5. **Closing** (1 min): Thank them, explain next steps
+
+## Questions to Cover
+${questionsText}
+
+## Important Guidelines
+- Stay in character as Alex the recruiter at ALL times
+- Do NOT break character or provide coaching/feedback during the call
+- If the candidate gives a surface-level answer, dig deeper: "That's interesting — what specifically was your role in that?"
+- If they claim achievements, ask for metrics: "What was the measurable impact?"
+- Be natural and conversational — don't read questions robotically
+- Keep track of time — aim for about 20 minutes total
+- If the candidate asks about the company, use the company context to answer authentically
+- End professionally: thank them and mention that next steps will follow`;
+}
+
 export async function startVapiCall(
   phoneNumber: string,
   assistantPrompt: string,
-  profileName: string
+  profileName: string,
+  options?: { mode?: InterviewMode; companyName?: string; jobTitle?: string }
 ): Promise<string> {
   const token = await getAuthToken();
 
@@ -88,7 +156,14 @@ export async function startVapiCall(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ phoneNumber, assistantPrompt, profileName }),
+    body: JSON.stringify({
+      phoneNumber,
+      assistantPrompt,
+      profileName,
+      mode: options?.mode,
+      companyName: options?.companyName,
+      jobTitle: options?.jobTitle,
+    }),
   });
 
   if (!response.ok) {
@@ -119,8 +194,9 @@ export async function getCallStatus(callId: string): Promise<VapiCallResponse> {
 
 export async function processTranscript(
   transcript: string,
-  profileName: string
-): Promise<{ summary: string; insights: string }> {
+  profileName: string,
+  options?: { mode?: InterviewMode; jobTitle?: string; companyName?: string; jobDescription?: string }
+): Promise<{ summary?: string; insights?: string; feedback?: MockInterviewFeedback }> {
   const token = await getAuthToken();
 
   const response = await fetch('/api/interview/process-transcript', {
@@ -129,7 +205,14 @@ export async function processTranscript(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ transcript, profileName }),
+    body: JSON.stringify({
+      transcript,
+      profileName,
+      mode: options?.mode,
+      jobTitle: options?.jobTitle,
+      companyName: options?.companyName,
+      jobDescription: options?.jobDescription,
+    }),
   });
 
   if (!response.ok) {

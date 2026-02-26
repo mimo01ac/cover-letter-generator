@@ -9,10 +9,11 @@ import { BriefingDocument } from './BriefingDocument';
 import { InterviewQuestions } from './InterviewQuestions';
 import { TalkingPoints } from './TalkingPoints';
 import { AudioBriefing } from './AudioBriefing';
+import { MockInterview } from './MockInterview';
 import { BriefingHistory } from './BriefingHistory';
 import type { Profile, PreviousJob, InterviewQuestion, TalkingPoint } from '../../types';
 
-type ActiveTab = 'briefing' | 'questions' | 'talking_points' | 'audio' | 'history';
+type ActiveTab = 'briefing' | 'questions' | 'talking_points' | 'audio' | 'mock_interview' | 'history';
 
 export function InterviewPrepPage() {
   const navigate = useNavigate();
@@ -616,6 +617,7 @@ export function InterviewPrepPage() {
                   { id: 'questions', label: 'Questions', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
                   { id: 'talking_points', label: 'Stories', icon: 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z' },
                   { id: 'audio', label: 'Audio', icon: 'M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z' },
+                  { id: 'mock_interview', label: 'Mock Interview', icon: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z' },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -660,6 +662,16 @@ export function InterviewPrepPage() {
                     podcastScript={podcastScript}
                     briefingId={briefingId}
                     savedAudioUrl={audioUrl}
+                  />
+                )}
+                {activeTab === 'mock_interview' && (
+                  <MockInterview
+                    briefingId={briefingId}
+                    jobTitle={jobTitle}
+                    companyName={companyName}
+                    jobDescription={jobDescription}
+                    profile={currentProfile}
+                    documents={documents}
                   />
                 )}
               </div>

@@ -5,6 +5,9 @@ interface StartCallRequest {
   phoneNumber: string;
   assistantPrompt: string;
   profileName: string;
+  mode?: 'career-interview' | 'mock-interview';
+  companyName?: string;
+  jobTitle?: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -44,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const body = req.body as StartCallRequest;
-  const { phoneNumber, assistantPrompt, profileName } = body;
+  const { phoneNumber, assistantPrompt, profileName, mode = 'career-interview', companyName, jobTitle } = body;
 
   if (!process.env.VAPI_API_KEY) {
     console.error('VAPI_API_KEY not configured');
@@ -55,6 +58,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('VAPI_PHONE_NUMBER_ID not configured');
     return res.status(500).json({ error: 'Server configuration error: VAPI_PHONE_NUMBER_ID not set' });
   }
+
+  const isMockInterview = mode === 'mock-interview';
+
+  const assistantName = isMockInterview
+    ? `${companyName || 'Company'} Recruiter`
+    : 'Career Interview Assistant';
+
+  const firstMessage = isMockInterview
+    ? `Hi ${profileName}, this is Alex from ${companyName || 'the company'}. Thanks for taking the time to speak with me today. I'm excited to learn more about your background and discuss the ${jobTitle || 'open'} position we have. Is now still a good time to chat?`
+    : `Hi ${profileName}, this is your career interview assistant. Thank you for taking the time to speak with me today. I'd like to learn more about your professional experience to help create better, more personalized cover letters for you. Is now still a good time to chat for about 15-20 minutes?`;
+
+  const endCallMessage = isMockInterview
+    ? `Thank you so much for your time today, ${profileName}. It was great speaking with you about the ${jobTitle || 'role'}. We'll be in touch soon with next steps. Have a great day!`
+    : "Thank you so much for sharing your experiences with me today. This has been really valuable, and I'll make sure all these insights are saved to help with your future cover letters. Have a great day!";
 
   try {
     const response = await fetch('https://api.vapi.ai/call/phone', {
@@ -70,7 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name: profileName,
         },
         assistant: {
-          name: 'Career Interview Assistant',
+          name: assistantName,
           model: {
             provider: 'anthropic',
             model: 'claude-sonnet-4-5-20250929',
@@ -81,10 +98,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
           voice: {
             provider: '11labs',
-            voiceId: 'paula',
+            voiceId: isMockInterview ? 'chris' : 'paula',
           },
-          firstMessage: `Hi ${profileName}, this is your career interview assistant. Thank you for taking the time to speak with me today. I'd like to learn more about your professional experience to help create better, more personalized cover letters for you. Is now still a good time to chat for about 15-20 minutes?`,
-          endCallMessage: "Thank you so much for sharing your experiences with me today. This has been really valuable, and I'll make sure all these insights are saved to help with your future cover letters. Have a great day!",
+          firstMessage,
+          endCallMessage,
           endCallPhrases: ['goodbye', 'bye', 'end call', 'stop'],
           transcriber: {
             provider: 'deepgram',

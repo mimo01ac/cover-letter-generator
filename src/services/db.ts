@@ -5,6 +5,8 @@ import type {
   Document,
   CoverLetter,
   InterviewResult,
+  InterviewMode,
+  MockInterviewFeedback,
   CachedInterviewGuide,
   InterviewBriefing,
   PreviousJob,
@@ -267,8 +269,8 @@ export async function deleteCoverLetter(id: string): Promise<void> {
 
 // Interview operations
 export async function saveInterview(interview: Omit<InterviewResult, 'id' | 'createdAt'>): Promise<string> {
-  const { data, error } = await supabase
-    .from('interview_results')
+  const { data, error } = await (supabase
+    .from('interview_results' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
     .insert({
       profile_id: interview.profileId,
       call_id: interview.callId,
@@ -277,94 +279,97 @@ export async function saveInterview(interview: Omit<InterviewResult, 'id' | 'cre
       transcript: interview.transcript || null,
       summary: interview.summary || null,
       insights: interview.insights || null,
+      mode: interview.mode || 'career-interview',
+      briefing_id: interview.briefingId || null,
+      job_title: interview.jobTitle || null,
+      company_name: interview.companyName || null,
+      feedback: interview.feedback ? (interview.feedback as unknown as Json) : null,
       completed_at: interview.completedAt?.toISOString() || null,
-    })
+    } as Record<string, unknown>)
     .select('id')
     .single();
 
   if (error) throw error;
-  return data.id;
+  return (data as { id: string }).id;
+}
+
+function rowToInterviewResult(row: Record<string, unknown>): InterviewResult {
+  return {
+    id: row.id as string,
+    profileId: row.profile_id as string,
+    callId: row.call_id as string,
+    phoneNumber: row.phone_number as string,
+    status: row.status as InterviewResult['status'],
+    transcript: (row.transcript as string) || undefined,
+    summary: (row.summary as string) || undefined,
+    insights: (row.insights as string) || undefined,
+    mode: (row.mode as InterviewMode) || undefined,
+    briefingId: (row.briefing_id as string) || undefined,
+    jobTitle: (row.job_title as string) || undefined,
+    companyName: (row.company_name as string) || undefined,
+    feedback: (row.feedback as MockInterviewFeedback) || undefined,
+    createdAt: toDate(row.created_at as string),
+    completedAt: row.completed_at ? toDate(row.completed_at as string) : undefined,
+  };
 }
 
 export async function getInterview(id: string): Promise<InterviewResult | undefined> {
-  const { data, error } = await supabase
-    .from('interview_results')
+  const { data, error } = await (supabase
+    .from('interview_results' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
     .select('*')
     .eq('id', id)
     .single();
 
   if (error || !data) return undefined;
-
-  return {
-    id: data.id,
-    profileId: data.profile_id,
-    callId: data.call_id,
-    phoneNumber: data.phone_number,
-    status: data.status as 'pending' | 'in-progress' | 'completed' | 'failed',
-    transcript: data.transcript || undefined,
-    summary: data.summary || undefined,
-    insights: data.insights || undefined,
-    createdAt: toDate(data.created_at),
-    completedAt: data.completed_at ? toDate(data.completed_at) : undefined,
-  };
+  return rowToInterviewResult(data as Record<string, unknown>);
 }
 
 export async function getInterviewByCallId(callId: string): Promise<InterviewResult | undefined> {
-  const { data, error } = await supabase
-    .from('interview_results')
+  const { data, error } = await (supabase
+    .from('interview_results' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
     .select('*')
     .eq('call_id', callId)
     .single();
 
   if (error || !data) return undefined;
-
-  return {
-    id: data.id,
-    profileId: data.profile_id,
-    callId: data.call_id,
-    phoneNumber: data.phone_number,
-    status: data.status as 'pending' | 'in-progress' | 'completed' | 'failed',
-    transcript: data.transcript || undefined,
-    summary: data.summary || undefined,
-    insights: data.insights || undefined,
-    createdAt: toDate(data.created_at),
-    completedAt: data.completed_at ? toDate(data.completed_at) : undefined,
-  };
+  return rowToInterviewResult(data as Record<string, unknown>);
 }
 
 export async function getInterviewsByProfile(profileId: string): Promise<InterviewResult[]> {
-  const { data, error } = await supabase
-    .from('interview_results')
+  const { data, error } = await (supabase
+    .from('interview_results' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
     .select('*')
     .eq('profile_id', profileId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
+  return ((data || []) as Record<string, unknown>[]).map(rowToInterviewResult);
+}
 
-  return (data || []).map((row) => ({
-    id: row.id,
-    profileId: row.profile_id,
-    callId: row.call_id,
-    phoneNumber: row.phone_number,
-    status: row.status as 'pending' | 'in-progress' | 'completed' | 'failed',
-    transcript: row.transcript || undefined,
-    summary: row.summary || undefined,
-    insights: row.insights || undefined,
-    createdAt: toDate(row.created_at),
-    completedAt: row.completed_at ? toDate(row.completed_at) : undefined,
-  }));
+export async function getMockInterviewsByBriefing(briefingId: string): Promise<InterviewResult[]> {
+  const { data, error } = await (supabase
+    .from('interview_results' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .select('*')
+    .eq('briefing_id', briefingId)
+    .eq('mode', 'mock-interview')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return ((data || []) as Record<string, unknown>[]).map(rowToInterviewResult);
 }
 
 export async function updateInterview(id: string, updates: Partial<InterviewResult>): Promise<void> {
-  const { error } = await supabase
-    .from('interview_results')
-    .update({
-      status: updates.status,
-      transcript: updates.transcript,
-      summary: updates.summary,
-      insights: updates.insights,
-      completed_at: updates.completedAt?.toISOString(),
-    })
+  const updateData: Record<string, unknown> = {};
+  if (updates.status !== undefined) updateData.status = updates.status;
+  if (updates.transcript !== undefined) updateData.transcript = updates.transcript;
+  if (updates.summary !== undefined) updateData.summary = updates.summary;
+  if (updates.insights !== undefined) updateData.insights = updates.insights;
+  if (updates.feedback !== undefined) updateData.feedback = updates.feedback;
+  if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt.toISOString();
+
+  const { error } = await (supabase
+    .from('interview_results' as 'profiles') as unknown as ReturnType<typeof supabase.from>)
+    .update(updateData)
     .eq('id', id);
 
   if (error) throw error;

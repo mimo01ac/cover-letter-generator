@@ -5,6 +5,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 interface ProcessTranscriptRequest {
   transcript: string;
   profileName: string;
+  mode?: 'career-interview' | 'mock-interview';
+  jobTitle?: string;
+  companyName?: string;
+  jobDescription?: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -45,14 +49,71 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const body = req.body as ProcessTranscriptRequest;
-  const { transcript, profileName } = body;
+  const { transcript, profileName, mode = 'career-interview', jobTitle, companyName, jobDescription } = body;
 
   const anthropic = new Anthropic({
     apiKey: anthropicKey,
   });
 
   try {
-    // Generate insights from transcript
+    if (mode === 'mock-interview') {
+      // Generate structured mock interview feedback
+      const feedbackResponse = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8192,
+        messages: [{
+          role: 'user',
+          content: `You are an expert interview coach. Analyze this mock interview transcript where the candidate was interviewed for the role of "${jobTitle || 'Unknown Role'}" at "${companyName || 'Unknown Company'}".
+
+## Job Description
+${jobDescription || 'Not provided'}
+
+## Interview Transcript
+${transcript}
+
+Provide detailed feedback in the following JSON format. Be honest but constructive. Score each item from 1-10.
+
+\`\`\`json
+{
+  "overallScore": <1-10>,
+  "categoryScores": [
+    { "category": "Communication", "score": <1-10>, "comment": "<specific feedback on clarity, articulation, confidence>" },
+    { "category": "Technical", "score": <1-10>, "comment": "<feedback on technical knowledge demonstration>" },
+    { "category": "Cultural Fit", "score": <1-10>, "comment": "<feedback on alignment with company values/culture>" },
+    { "category": "Problem-Solving", "score": <1-10>, "comment": "<feedback on analytical thinking and structured responses>" },
+    { "category": "Pressure Handling", "score": <1-10>, "comment": "<feedback on composure under challenging questions>" }
+  ],
+  "questionFeedback": [
+    {
+      "question": "<the question that was asked>",
+      "candidateResponse": "<brief summary of what they said>",
+      "score": <1-10>,
+      "whatWentWell": "<positive aspects>",
+      "whatToImprove": "<areas for improvement>",
+      "suggestedBetterAnswer": "<a stronger version of their answer>"
+    }
+  ],
+  "strengths": ["<strength 1>", "<strength 2>", ...],
+  "areasForImprovement": ["<area 1>", "<area 2>", ...],
+  "actionItems": ["<specific action 1>", "<specific action 2>", ...]
+}
+\`\`\`
+
+Return ONLY the JSON, no other text.`
+        }],
+      });
+
+      const feedbackText = feedbackResponse.content[0].type === 'text' ? feedbackResponse.content[0].text : '';
+
+      // Parse JSON from response (handle markdown code fences)
+      const jsonMatch = feedbackText.match(/```json\s*([\s\S]*?)```/) || feedbackText.match(/```\s*([\s\S]*?)```/);
+      const jsonStr = jsonMatch ? jsonMatch[1].trim() : feedbackText.trim();
+      const feedback = JSON.parse(jsonStr);
+
+      return res.status(200).json({ feedback });
+    }
+
+    // Original career-interview flow
     const insightsResponse = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,

@@ -87,6 +87,32 @@ export interface InterviewGuide {
   closing: string;
 }
 
+export type InterviewMode = 'career-interview' | 'mock-interview';
+
+export interface MockInterviewCategoryScore {
+  category: 'Communication' | 'Technical' | 'Cultural Fit' | 'Problem-Solving' | 'Pressure Handling';
+  score: number;
+  comment: string;
+}
+
+export interface MockInterviewQuestionFeedback {
+  question: string;
+  candidateResponse: string;
+  score: number;
+  whatWentWell: string;
+  whatToImprove: string;
+  suggestedBetterAnswer: string;
+}
+
+export interface MockInterviewFeedback {
+  overallScore: number;
+  categoryScores: MockInterviewCategoryScore[];
+  questionFeedback: MockInterviewQuestionFeedback[];
+  strengths: string[];
+  areasForImprovement: string[];
+  actionItems: string[];
+}
+
 export interface InterviewResult {
   id?: string;
   profileId: string;
@@ -96,6 +122,11 @@ export interface InterviewResult {
   transcript?: string;
   summary?: string;
   insights?: string;
+  mode?: InterviewMode;
+  briefingId?: string;
+  jobTitle?: string;
+  companyName?: string;
+  feedback?: MockInterviewFeedback;
   createdAt: Date;
   completedAt?: Date;
 }
