@@ -90,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name: assistantName,
           model: {
             provider: 'anthropic',
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-5-20250929',
             messages: [{
               role: 'system',
               content: assistantPrompt,
@@ -98,7 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
           voice: {
             provider: '11labs',
-            voiceId: isMockInterview ? 'chris' : 'paula',
+            voiceId: isMockInterview ? 'drew' : 'paula',
           },
           firstMessage,
           endCallMessage,
