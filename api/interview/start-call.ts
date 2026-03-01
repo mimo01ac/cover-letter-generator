@@ -90,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name: assistantName,
           model: {
             provider: 'anthropic',
-            model: 'claude-sonnet-4-5-20250929',
+            model: 'claude-sonnet-4-20250514',
             messages: [{
               role: 'system',
               content: assistantPrompt,
