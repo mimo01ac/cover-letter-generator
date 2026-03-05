@@ -170,7 +170,7 @@ export function CaseInterviewPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Case Interview Prep</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Upload a case, practice your approach, then reveal AI-suggested solutions.
+          Prepare for take-home and pre-read strategic cases. Upload the case brief you received, practice presenting your strategic plan, then reveal AI-suggested approaches.
         </p>
       </div>
 

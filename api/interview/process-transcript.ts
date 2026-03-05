@@ -63,47 +63,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         max_tokens: 8192,
         messages: [{
           role: 'user',
-          content: `You are an expert case interview coach (McKinsey/BCG/Bain caliber). Analyze this case interview transcript and provide detailed, structured feedback.
+          content: `You are a senior executive coach evaluating a candidate's performance in a strategic case presentation. The candidate received a pre-read case brief in advance and is presenting their strategic plan — similar to a new CCO presenting their 90-day turnaround plan to the board.
 
-## Case Material
+This is NOT a traditional consulting case interview. Evaluate them as a senior executive would: on strategic clarity, leadership thinking, prioritization, stakeholder awareness, and ability to handle pushback.
+
+## Case Brief (what the candidate was given in advance)
 ${jobDescription || 'Not provided'}
 
 ## Interview Transcript
 ${transcript}
 
-Provide feedback in the following JSON format. Score each item from 1-10. Be honest, specific, and constructive.
+Provide feedback in the following JSON format. Score each item from 1-10. Be honest, specific, and constructive. Evaluate like a hiring panel of senior executives.
 
 \`\`\`json
 {
   "overallScore": <1-10>,
   "categoryScores": [
-    { "category": "Problem Structuring", "score": <1-10>, "comment": "<feedback on MECE-ness, framework quality, hypothesis clarity>" },
-    { "category": "Quantitative Skills", "score": <1-10>, "comment": "<feedback on math accuracy, structured calculations, sizing>" },
-    { "category": "Business Judgment", "score": <1-10>, "comment": "<feedback on commercial awareness, realistic assumptions, industry knowledge>" },
-    { "category": "Communication", "score": <1-10>, "comment": "<feedback on clarity, top-down structure, signposting>" },
-    { "category": "Synthesis & Recommendation", "score": <1-10>, "comment": "<feedback on actionability, evidence-backing, conciseness>" }
+    { "category": "Problem Structuring", "score": <1-10>, "comment": "<feedback on strategic clarity, prioritization, logical sequencing of their plan>" },
+    { "category": "Quantitative Skills", "score": <1-10>, "comment": "<feedback on use of data, metrics, targets, and benchmarks to support their strategy>" },
+    { "category": "Business Judgment", "score": <1-10>, "comment": "<feedback on commercial realism, stakeholder awareness, execution feasibility, risk assessment>" },
+    { "category": "Communication", "score": <1-10>, "comment": "<feedback on executive presence, narrative flow, confidence, ability to be concise>" },
+    { "category": "Synthesis & Recommendation", "score": <1-10>, "comment": "<feedback on quality of final recommendation, board-readiness, adaptability when challenged>" }
   ],
   "structureAnalysis": {
-    "framework": "<name of framework the candidate used>",
+    "framework": "<the strategic framework or approach the candidate used>",
     "meceScore": <1-10>,
-    "comment": "<detailed feedback on their problem structuring>"
+    "comment": "<feedback on how well-structured and comprehensive their strategic plan was>"
   },
   "communicationAnalysis": {
     "clarity": <1-10>,
     "topDown": <1-10>,
     "signposting": <1-10>,
-    "comment": "<detailed feedback on how they communicated>"
+    "comment": "<feedback on executive communication style — did they lead with the headline? Were transitions clear?>"
   },
   "quantitativeAnalysis": {
     "mathAccuracy": <1-10>,
     "structuredApproach": <1-10>,
-    "comment": "<detailed feedback on their quantitative work>"
+    "comment": "<feedback on how they used data and metrics to support their strategy — not math-for-math's-sake>"
   },
   "synthesisFeedback": {
     "actionable": <1-10>,
     "supported": <1-10>,
     "concise": <1-10>,
-    "comment": "<detailed feedback on their final recommendation>"
+    "comment": "<feedback on their final recommendation — would the board approve this?>"
   },
   "strengths": ["<strength 1>", "<strength 2>"],
   "areasForImprovement": ["<area 1>", "<area 2>"],

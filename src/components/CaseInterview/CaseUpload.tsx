@@ -54,6 +54,14 @@ export function CaseUpload({ briefings, onAnalyze, isAnalyzing }: CaseUploadProp
 
   return (
     <div className="space-y-5">
+      {/* Context */}
+      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">For take-home & pre-read cases</h4>
+        <p className="text-xs text-gray-600 dark:text-gray-400">
+          This module is designed for strategic case briefs you receive before an interview — e.g., "You are the new CCO, market share has been declining, what is your plan for the first 90 days?" Upload the brief, build your own strategic approach, and practice presenting it before seeing AI-suggested solutions.
+        </p>
+      </div>
+
       {/* Title */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -63,7 +71,7 @@ export function CaseUpload({ briefings, onAnalyze, isAnalyzing }: CaseUploadProp
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g., Market Entry Strategy for TechCorp"
+          placeholder="e.g., CCO First 90 Days — Reversing Market Share Decline"
           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
         />
       </div>
@@ -122,12 +130,12 @@ export function CaseUpload({ briefings, onAnalyze, isAnalyzing }: CaseUploadProp
       {/* Paste Text */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Or Paste Case Text
+          Or Paste Case Brief
         </label>
         <textarea
           value={pastedText}
           onChange={(e) => setPastedText(e.target.value)}
-          placeholder="Paste the case description here..."
+          placeholder="Paste the pre-read case brief here..."
           rows={6}
           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-y"
         />

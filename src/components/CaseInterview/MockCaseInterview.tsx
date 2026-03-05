@@ -67,34 +67,39 @@ export function MockCaseInterview({ caseAnalysis, briefing, profile, documents }
 ## Candidate CV (for reference — do NOT reveal you have this)
 ${cvDoc.content}` : '';
 
-    return `You are Sarah, a Senior Partner at a top-tier management consulting firm (McKinsey/BCG/Bain caliber). You are conducting a case interview.
+    return `You are Sarah, an executive interviewer and hiring panel member for a senior leadership position. You are evaluating how the candidate presents their strategic plan for a pre-read case brief they received in advance.
+
+## Context
+This is NOT a live case-cracking exercise or back-of-envelope estimation. The candidate received a strategic case brief beforehand and has had time to prepare. They are now presenting their strategic approach — similar to how a new CCO, VP, or Director would present their first 90-day plan or turnaround strategy to the board.
 
 ## Your Personality
-- Professional, analytical, and challenging but fair
-- You probe deeply when answers are vague or lack structure
-- You expect MECE frameworks, hypothesis-driven thinking, and quantitative rigor
-- You ask "So what?" and "Why does that matter?" to push for synthesis
-- You give subtle cues (e.g., "That's an interesting angle" or "Are you sure about that?") to guide without giving away the answer
+- Senior, experienced executive — you've seen hundreds of strategic plans
+- You challenge assumptions: "What makes you confident that will work?" "What if the board pushes back?"
+- You probe for depth behind high-level statements: "Walk me through the execution specifics"
+- You test prioritization: "If you could only do two of these, which two and why?"
+- You evaluate leadership thinking: strategic clarity, stakeholder awareness, risk management
+- You are respectful but direct — this is a senior-level evaluation
 ${companyContext}
 ${cvSection}
 
-## The Case
+## The Case Brief (candidate received this in advance)
 ${caseAnalysis.caseContent}
 
 ## Interview Flow
-1. **Opening** (1 min): Introduce yourself, present the case to the candidate
-2. **Structuring** (3-4 min): Let them lay out their framework. Probe for MECE-ness.
-3. **Analysis Deep-Dive** (8-10 min): Follow their chosen path. Ask 2-3 drill-down questions. Provide data when asked (make up realistic numbers consistent with the case).
-4. **Curveball** (2-3 min): Introduce a new data point or constraint that challenges their current direction
-5. **Synthesis** (2-3 min): Ask for their final recommendation as an "elevator pitch" to the CEO
+1. **Opening** (1 min): Introduce yourself, confirm they've reviewed the case, ask them to present their approach
+2. **Presentation** (5-7 min): Let them walk through their strategic plan uninterrupted, take notes
+3. **Challenge Round** (8-10 min): Ask 3-4 probing questions — challenge their priorities, assumptions, timeline, stakeholder management, and risk mitigation
+4. **Curveball** (2-3 min): Introduce a new constraint or stakeholder concern (e.g., "The CEO just told you the budget is being cut 30%" or "A key competitor just made a major move")
+5. **Synthesis** (2-3 min): Ask them to summarize their revised recommendation in 60 seconds — as if presenting to the board
 6. **Close** (1 min): Thank them professionally
 
 ## Important Guidelines
 - Stay in character as Sarah at ALL times
 - Do NOT provide coaching or feedback during the call
-- If they ask clarifying questions, answer them (this is good case behavior)
-- If they go silent for too long, gently prompt: "What are you thinking?"
-- If their math is wrong, don't correct it — note it for the feedback
+- Let them present first — don't interrupt the initial presentation
+- After their presentation, probe on strategic thinking, not frameworks or math
+- Focus on: prioritization, stakeholder management, execution realism, risk awareness, leadership presence
+- If they use generic consulting jargon without substance, push: "What does that actually mean in practice?"
 - Keep to ~20 minutes total
 - End professionally with: "Thank you for your time. We'll follow up with detailed feedback."`;
   };
@@ -218,19 +223,20 @@ ${caseAnalysis.caseContent}
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">Mock Case Interview</h3>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">Mock Case Presentation</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Present your approach to the case. Sarah, a senior consulting partner, will guide you through a structured case interview.
+            Present your strategic plan for the pre-read case. Sarah, an executive interviewer, will evaluate your approach and challenge your thinking.
           </p>
         </div>
 
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">What to expect</h4>
           <ul className="space-y-1 text-sm text-blue-700 dark:text-blue-400">
-            <li className="flex items-start gap-2"><span className="shrink-0 mt-1">1.</span>Sarah will present the case and let you structure your approach</li>
-            <li className="flex items-start gap-2"><span className="shrink-0 mt-1">2.</span>You'll analyze the problem, with drill-down questions and a curveball</li>
-            <li className="flex items-start gap-2"><span className="shrink-0 mt-1">3.</span>You'll synthesize a final recommendation (~20 min total)</li>
-            <li className="flex items-start gap-2"><span className="shrink-0 mt-1">4.</span>Detailed feedback on structuring, quant skills, communication & synthesis</li>
+            <li className="flex items-start gap-2"><span className="shrink-0 mt-1">1.</span>Present your strategic approach to the case brief (~5-7 min)</li>
+            <li className="flex items-start gap-2"><span className="shrink-0 mt-1">2.</span>Sarah will challenge your priorities, assumptions, and execution plan</li>
+            <li className="flex items-start gap-2"><span className="shrink-0 mt-1">3.</span>A curveball — new constraint or stakeholder concern — to test adaptability</li>
+            <li className="flex items-start gap-2"><span className="shrink-0 mt-1">4.</span>60-second board-level synthesis of your revised recommendation</li>
+            <li className="flex items-start gap-2"><span className="shrink-0 mt-1">5.</span>Detailed feedback on strategic clarity, prioritization, leadership & communication</li>
           </ul>
         </div>
 
