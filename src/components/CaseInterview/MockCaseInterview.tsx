@@ -20,7 +20,7 @@ type CallState = 'ready' | 'calling' | 'in-progress' | 'processing' | 'completed
 
 export function MockCaseInterview({ caseAnalysis, briefing, profile, documents }: MockCaseInterviewProps) {
   const [state, setState] = useState<CallState>('ready');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(profile.phone || '');
   const [error, setError] = useState('');
   const [, setCallId] = useState<string | null>(null);
   const [, setInterviewId] = useState<string | null>(null);

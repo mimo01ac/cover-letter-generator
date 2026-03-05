@@ -34,7 +34,7 @@ export function MockInterview({
   documents,
 }: MockInterviewProps) {
   const [state, setState] = useState<MockInterviewState>('ready');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(profile.phone || '');
   const [error, setError] = useState('');
   const [, setCallId] = useState<string | null>(null);
   const [, setInterviewId] = useState<string | null>(null);
