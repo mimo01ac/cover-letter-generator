@@ -5,7 +5,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 interface ProcessTranscriptRequest {
   transcript: string;
   profileName: string;
-  mode?: 'career-interview' | 'mock-interview';
+  mode?: 'career-interview' | 'mock-interview' | 'case-interview';
   jobTitle?: string;
   companyName?: string;
   jobDescription?: string;
@@ -56,6 +56,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   });
 
   try {
+    if (mode === 'case-interview') {
+      // Generate structured case interview feedback
+      const feedbackResponse = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8192,
+        messages: [{
+          role: 'user',
+          content: `You are an expert case interview coach (McKinsey/BCG/Bain caliber). Analyze this case interview transcript and provide detailed, structured feedback.
+
+## Case Material
+${jobDescription || 'Not provided'}
+
+## Interview Transcript
+${transcript}
+
+Provide feedback in the following JSON format. Score each item from 1-10. Be honest, specific, and constructive.
+
+\`\`\`json
+{
+  "overallScore": <1-10>,
+  "categoryScores": [
+    { "category": "Problem Structuring", "score": <1-10>, "comment": "<feedback on MECE-ness, framework quality, hypothesis clarity>" },
+    { "category": "Quantitative Skills", "score": <1-10>, "comment": "<feedback on math accuracy, structured calculations, sizing>" },
+    { "category": "Business Judgment", "score": <1-10>, "comment": "<feedback on commercial awareness, realistic assumptions, industry knowledge>" },
+    { "category": "Communication", "score": <1-10>, "comment": "<feedback on clarity, top-down structure, signposting>" },
+    { "category": "Synthesis & Recommendation", "score": <1-10>, "comment": "<feedback on actionability, evidence-backing, conciseness>" }
+  ],
+  "structureAnalysis": {
+    "framework": "<name of framework the candidate used>",
+    "meceScore": <1-10>,
+    "comment": "<detailed feedback on their problem structuring>"
+  },
+  "communicationAnalysis": {
+    "clarity": <1-10>,
+    "topDown": <1-10>,
+    "signposting": <1-10>,
+    "comment": "<detailed feedback on how they communicated>"
+  },
+  "quantitativeAnalysis": {
+    "mathAccuracy": <1-10>,
+    "structuredApproach": <1-10>,
+    "comment": "<detailed feedback on their quantitative work>"
+  },
+  "synthesisFeedback": {
+    "actionable": <1-10>,
+    "supported": <1-10>,
+    "concise": <1-10>,
+    "comment": "<detailed feedback on their final recommendation>"
+  },
+  "strengths": ["<strength 1>", "<strength 2>"],
+  "areasForImprovement": ["<area 1>", "<area 2>"],
+  "actionItems": ["<specific practice recommendation 1>", "<specific recommendation 2>"]
+}
+\`\`\`
+
+Return ONLY the JSON, no other text.`
+        }],
+      });
+
+      const feedbackText = feedbackResponse.content[0].type === 'text' ? feedbackResponse.content[0].text : '';
+      const jsonMatch = feedbackText.match(/```json\s*([\s\S]*?)```/) || feedbackText.match(/```\s*([\s\S]*?)```/);
+      const jsonStr = jsonMatch ? jsonMatch[1].trim() : feedbackText.trim();
+      const feedback = JSON.parse(jsonStr);
+
+      return res.status(200).json({ feedback });
+    }
+
     if (mode === 'mock-interview') {
       // Generate structured mock interview feedback
       const feedbackResponse = await anthropic.messages.create({

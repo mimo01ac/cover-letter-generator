@@ -8,6 +8,7 @@ import { SettingsPage } from './components/Settings';
 import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
 import { InterviewPrepPage } from './components/InterviewPrep';
 import { CVTailorPage } from './components/CVTailor';
+import { CaseInterviewPage } from './components/CaseInterview';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
             <Route path="/" element={<Generator />} />
             <Route path="/cv-tailor" element={<CVTailorPage />} />
             <Route path="/interview-prep" element={<InterviewPrepPage />} />
+            <Route path="/case-interview" element={<CaseInterviewPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />

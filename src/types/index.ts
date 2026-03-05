@@ -87,7 +87,7 @@ export interface InterviewGuide {
   closing: string;
 }
 
-export type InterviewMode = 'career-interview' | 'mock-interview';
+export type InterviewMode = 'career-interview' | 'mock-interview' | 'case-interview';
 
 export interface MockInterviewCategoryScore {
   category: 'Communication' | 'Technical' | 'Cultural Fit' | 'Problem-Solving' | 'Pressure Handling';
@@ -315,6 +315,97 @@ export interface CVTailorGenerationRequest {
   language?: 'en' | 'da';
   customNotes?: string;
   selectedTemplate?: CVTemplate;
+}
+
+// Case Interview Types
+export type CaseAnalysisStatus = 'analyzing' | 'ready' | 'error';
+
+export interface IssueTreeNode {
+  branch: string;
+  subBranches: string[];
+  keyQuestions: string[];
+}
+
+export interface CaseFramework {
+  type: string;
+  hypothesis: string;
+  issueTree: IssueTreeNode[];
+  quantitativeAnchors: string[];
+}
+
+export interface CaseApproach {
+  name: string;
+  angle: string;
+  openingStructure: string;
+  keyAnalyses: string[];
+  recommendation: string;
+  risks: string[];
+  bestWhen: string;
+}
+
+export interface CaseAnalysis {
+  id?: string;
+  profileId: string;
+  briefingId: string | null;
+  title: string;
+  caseContent: string;
+  summary: string;
+  framework: CaseFramework | null;
+  approaches: CaseApproach[];
+  keyMetrics: string[];
+  pitfalls: string[];
+  solutionsRevealed: boolean;
+  status: CaseAnalysisStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type CaseCategoryName =
+  | 'Problem Structuring'
+  | 'Quantitative Skills'
+  | 'Business Judgment'
+  | 'Communication'
+  | 'Synthesis & Recommendation';
+
+export interface CaseCategoryScore {
+  category: CaseCategoryName;
+  score: number;
+  comment: string;
+}
+
+export interface CaseInterviewFeedback {
+  overallScore: number;
+  categoryScores: CaseCategoryScore[];
+  structureAnalysis: {
+    framework: string;
+    meceScore: number;
+    comment: string;
+  };
+  communicationAnalysis: {
+    clarity: number;
+    topDown: number;
+    signposting: number;
+    comment: string;
+  };
+  quantitativeAnalysis: {
+    mathAccuracy: number;
+    structuredApproach: number;
+    comment: string;
+  };
+  synthesisFeedback: {
+    actionable: number;
+    supported: number;
+    concise: number;
+    comment: string;
+  };
+  industryRelevance?: {
+    score: number;
+    comment: string;
+  };
+  strengths: string[];
+  areasForImprovement: string[];
+  actionItems: string[];
+  comparisonToApproaches?: string;
 }
 
 // Job from previous cover letters (for reuse)

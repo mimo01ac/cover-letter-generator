@@ -38,6 +38,9 @@ export function Navigation() {
             <NavLink to="/interview-prep" className={linkClass}>
               Interview Prep
             </NavLink>
+            <NavLink to="/case-interview" className={linkClass}>
+              Case Prep
+            </NavLink>
             <NavLink to="/settings" className={linkClass}>
               Settings
             </NavLink>

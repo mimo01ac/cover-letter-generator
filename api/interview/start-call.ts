@@ -5,7 +5,7 @@ interface StartCallRequest {
   phoneNumber: string;
   assistantPrompt: string;
   profileName: string;
-  mode?: 'career-interview' | 'mock-interview';
+  mode?: 'career-interview' | 'mock-interview' | 'case-interview';
   companyName?: string;
   jobTitle?: string;
 }
@@ -60,18 +60,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const isMockInterview = mode === 'mock-interview';
+  const isCaseInterview = mode === 'case-interview';
 
-  const assistantName = isMockInterview
-    ? `${companyName || 'Company'} Recruiter`
-    : 'Career Interview Assistant';
+  const assistantName = isCaseInterview
+    ? 'Case Interview Partner'
+    : isMockInterview
+      ? `${companyName || 'Company'} Recruiter`
+      : 'Career Interview Assistant';
 
-  const firstMessage = isMockInterview
-    ? `Hi ${profileName}, this is Alex from ${companyName || 'the company'}. Thanks for taking the time to speak with me today. I'm excited to learn more about your background and discuss the ${jobTitle || 'open'} position we have. Is now still a good time to chat?`
-    : `Hi ${profileName}, this is your career interview assistant. Thank you for taking the time to speak with me today. I'd like to learn more about your professional experience to help create better, more personalized cover letters for you. Is now still a good time to chat for about 15-20 minutes?`;
+  const firstMessage = isCaseInterview
+    ? `Hi ${profileName}, this is Sarah. I'll be your case interviewer today. Thank you for making the time. I have a case prepared for you — are you ready to get started?`
+    : isMockInterview
+      ? `Hi ${profileName}, this is Alex from ${companyName || 'the company'}. Thanks for taking the time to speak with me today. I'm excited to learn more about your background and discuss the ${jobTitle || 'open'} position we have. Is now still a good time to chat?`
+      : `Hi ${profileName}, this is your career interview assistant. Thank you for taking the time to speak with me today. I'd like to learn more about your professional experience to help create better, more personalized cover letters for you. Is now still a good time to chat for about 15-20 minutes?`;
 
-  const endCallMessage = isMockInterview
-    ? `Thank you so much for your time today, ${profileName}. It was great speaking with you about the ${jobTitle || 'role'}. We'll be in touch soon with next steps. Have a great day!`
-    : "Thank you so much for sharing your experiences with me today. This has been really valuable, and I'll make sure all these insights are saved to help with your future cover letters. Have a great day!";
+  const endCallMessage = isCaseInterview
+    ? `Thank you for your time, ${profileName}. That was a solid case discussion. We'll follow up with detailed feedback on your performance. Have a great day!`
+    : isMockInterview
+      ? `Thank you so much for your time today, ${profileName}. It was great speaking with you about the ${jobTitle || 'role'}. We'll be in touch soon with next steps. Have a great day!`
+      : "Thank you so much for sharing your experiences with me today. This has been really valuable, and I'll make sure all these insights are saved to help with your future cover letters. Have a great day!";
 
   try {
     const response = await fetch('https://api.vapi.ai/call/phone', {
@@ -98,7 +105,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
           voice: {
             provider: '11labs',
-            voiceId: isMockInterview ? 'drew' : 'paula',
+            voiceId: isCaseInterview ? 'paula' : isMockInterview ? 'drew' : 'paula',
           },
           firstMessage,
           endCallMessage,

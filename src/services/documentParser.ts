@@ -54,6 +54,22 @@ export async function parsePdfFile(file: File): Promise<string> {
   }
 }
 
+export async function parseDocxFile(file: File): Promise<string> {
+  try {
+    const mammoth = await import('mammoth');
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const text = result.value.trim();
+    if (!text) {
+      throw new Error('No text content could be extracted from the Word document');
+    }
+    return text;
+  } catch (error) {
+    console.error('DOCX parsing error:', error);
+    throw new Error(`Failed to parse Word document: ${error instanceof Error ? error.message : 'Unknown error'}. Please try copying and pasting the text manually.`);
+  }
+}
+
 export async function parseDocument(file: File): Promise<string> {
   const extension = file.name.split('.').pop()?.toLowerCase();
 
@@ -63,8 +79,10 @@ export async function parseDocument(file: File): Promise<string> {
       return parseTextFile(file);
     case 'pdf':
       return parsePdfFile(file);
+    case 'docx':
+      return parseDocxFile(file);
     default:
-      throw new Error(`Unsupported file type: ${extension}. Please use .txt, .md, or .pdf files.`);
+      throw new Error(`Unsupported file type: ${extension}. Please use .txt, .md, .pdf, or .docx files.`);
   }
 }
 

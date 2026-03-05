@@ -5,7 +5,6 @@ import type {
   InterviewGuide,
   InterviewMode,
   InterviewBriefing,
-  MockInterviewFeedback,
 } from '../types';
 
 interface VapiCallResponse {
@@ -196,7 +195,9 @@ export async function processTranscript(
   transcript: string,
   profileName: string,
   options?: { mode?: InterviewMode; jobTitle?: string; companyName?: string; jobDescription?: string }
-): Promise<{ summary?: string; insights?: string; feedback?: MockInterviewFeedback }> {
+  // Returns MockInterviewFeedback for mock-interview mode, CaseInterviewFeedback for case-interview mode
+  // Both stored as JSONB in interview_results.feedback
+): Promise<{ summary?: string; insights?: string; feedback?: Record<string, unknown> }> {
   const token = await getAuthToken();
 
   const response = await fetch('/api/interview/process-transcript', {
