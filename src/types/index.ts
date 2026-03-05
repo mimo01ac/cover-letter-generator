@@ -320,27 +320,11 @@ export interface CVTailorGenerationRequest {
 // Case Interview Types
 export type CaseAnalysisStatus = 'analyzing' | 'ready' | 'error';
 
-export interface IssueTreeNode {
-  branch: string;
-  subBranches: string[];
-  keyQuestions: string[];
-}
-
-export interface CaseFramework {
-  type: string;
-  hypothesis: string;
-  issueTree: IssueTreeNode[];
-  quantitativeAnchors: string[];
-}
-
-export interface CaseApproach {
-  name: string;
-  angle: string;
-  openingStructure: string;
-  keyAnalyses: string[];
-  recommendation: string;
-  risks: string[];
-  bestWhen: string;
+export interface CaseSection {
+  title: string;
+  context: string;
+  veryGoodAnswer: string;
+  exceptionalAddition: string;
 }
 
 export interface CaseAnalysis {
@@ -350,10 +334,8 @@ export interface CaseAnalysis {
   title: string;
   caseContent: string;
   summary: string;
-  framework: CaseFramework | null;
-  approaches: CaseApproach[];
-  keyMetrics: string[];
-  pitfalls: string[];
+  sections: CaseSection[];
+  executiveTips: string[];
   solutionsRevealed: boolean;
   status: CaseAnalysisStatus;
   createdAt: Date;

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { CaseAnalysis } from '../../types';
-import { CaseApproachCard } from './CaseApproachCard';
 import { updateCaseAnalysis } from '../../services/caseInterview';
 
 interface CaseAnalysisViewProps {
@@ -12,6 +11,7 @@ interface CaseAnalysisViewProps {
 export function CaseAnalysisView({ analysis, onRevealed, onPractice }: CaseAnalysisViewProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
   const handleReveal = async () => {
     if (!analysis.id) return;
@@ -25,6 +25,23 @@ export function CaseAnalysisView({ analysis, onRevealed, onPractice }: CaseAnaly
       setIsRevealing(false);
       setShowConfirm(false);
     }
+  };
+
+  const toggleSection = (index: number) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    setExpandedSections(new Set(analysis.sections.map((_, i) => i)));
+  };
+
+  const collapseAll = () => {
+    setExpandedSections(new Set());
   };
 
   return (
@@ -91,104 +108,98 @@ export function CaseAnalysisView({ analysis, onRevealed, onPractice }: CaseAnaly
       {/* Revealed Content */}
       {analysis.solutionsRevealed && (
         <>
-          {/* Framework */}
-          {analysis.framework && (
+          {/* Sections */}
+          {analysis.sections.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                Framework: {analysis.framework.type}
-              </h3>
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-3">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">Hypothesis</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{analysis.framework.hypothesis}</p>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                  Section-by-Section Analysis ({analysis.sections.length})
+                </h3>
+                <div className="flex gap-2">
+                  <button onClick={expandAll} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                    Expand all
+                  </button>
+                  <span className="text-xs text-gray-400">|</span>
+                  <button onClick={collapseAll} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                    Collapse all
+                  </button>
                 </div>
-
-                {/* Issue Tree */}
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">Issue Tree (MECE)</p>
-                  <div className="space-y-2">
-                    {analysis.framework.issueTree.map((node, i) => (
-                      <div key={i} className="border-l-2 border-blue-300 dark:border-blue-600 pl-3">
-                        <p className="text-sm font-medium text-gray-800 dark:text-white">{node.branch}</p>
-                        <div className="ml-3 mt-1 space-y-0.5">
-                          {node.subBranches.map((sub, j) => (
-                            <p key={j} className="text-xs text-gray-600 dark:text-gray-400">- {sub}</p>
-                          ))}
-                        </div>
-                        {node.keyQuestions.length > 0 && (
-                          <div className="ml-3 mt-1">
-                            {node.keyQuestions.map((q, j) => (
-                              <p key={j} className="text-xs text-blue-600 dark:text-blue-400 italic">? {q}</p>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Quantitative Anchors */}
-                {analysis.framework.quantitativeAnchors.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">Key Calculations</p>
-                    <ul className="space-y-0.5">
-                      {analysis.framework.quantitativeAnchors.map((a, i) => (
-                        <li key={i} className="text-xs text-gray-600 dark:text-gray-400">- {a}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
-            </div>
-          )}
-
-          {/* 3 Approaches */}
-          {analysis.approaches.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                3 Solution Approaches
-              </h3>
               <div className="space-y-3">
-                {analysis.approaches.map((approach, i) => (
-                  <CaseApproachCard key={i} approach={approach} index={i} />
-                ))}
+                {analysis.sections.map((section, i) => {
+                  const isExpanded = expandedSections.has(i);
+                  return (
+                    <div key={i} className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => toggleSection(i)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-semibold flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <span className="text-sm font-medium text-gray-800 dark:text-white">{section.title}</span>
+                        </div>
+                        <svg
+                          className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-4 py-4 space-y-4">
+                          {/* Context */}
+                          <div>
+                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">Why this matters</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{section.context}</p>
+                          </div>
+
+                          {/* Very Good Answer */}
+                          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase">Very Good Answer</p>
+                            </div>
+                            <p className="text-sm text-green-900 dark:text-green-200 whitespace-pre-wrap">{section.veryGoodAnswer}</p>
+                          </div>
+
+                          {/* Exceptional Addition */}
+                          <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                              </svg>
+                              <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase">Exceptional Addition</p>
+                            </div>
+                            <p className="text-sm text-purple-900 dark:text-purple-200 whitespace-pre-wrap">{section.exceptionalAddition}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Key Metrics */}
-          {analysis.keyMetrics.length > 0 && (
+          {/* Executive Tips */}
+          {analysis.executiveTips.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                Key Metrics & Data Points
+                Executive Tips
               </h3>
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <ul className="space-y-1">
-                  {analysis.keyMetrics.map((m, i) => (
-                    <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">#</span>
-                      {m}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* Pitfalls */}
-          {analysis.pitfalls.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                Common Pitfalls to Avoid
-              </h3>
-              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
-                <ul className="space-y-1">
-                  {analysis.pitfalls.map((p, i) => (
-                    <li key={i} className="text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
-                      <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <ul className="space-y-2">
+                  {analysis.executiveTips.map((tip, i) => (
+                    <li key={i} className="text-sm text-blue-900 dark:text-blue-200 flex items-start gap-2">
+                      <svg className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      {p}
+                      {tip}
                     </li>
                   ))}
                 </ul>

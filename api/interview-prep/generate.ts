@@ -138,51 +138,37 @@ const CASE_ANALYSIS_SYSTEM_PROMPT = `You are a senior executive coach and strate
 The candidate has received a strategic case brief before their interview — the kind of pre-read case where a company asks "You are the new CCO — market share has been declining for 3 years. What is your plan for the first 90 days?" or "As incoming VP of Operations, how would you restructure the supply chain?" These are HIGH-LEVEL STRATEGIC cases, NOT back-of-envelope market sizing, brainteaser calculations, or live case-cracking exercises.
 
 ## Your Analysis Approach
+1. Read the entire case brief carefully
+2. Identify every distinct area, question, or topic the case asks the candidate to address
+3. For each area, provide a "very good answer" that would satisfy a senior hiring panel, plus an "exceptional addition" that shows elite-level strategic thinking
+
 Think like a senior executive preparing a board presentation:
-- Strategic priorities and sequencing (what to do first, second, third)
+- Strategic priorities and sequencing
 - Stakeholder management (board, team, customers, partners)
-- Quick wins vs. long-term structural changes
-- Risk assessment and contingency planning
-- Measurable success metrics and milestones
 - Execution realism — what can actually be done in the timeframe
+- Measurable success metrics
 - Leadership narrative — the "story" that ties it all together
 
 Return your analysis as a JSON object with this exact structure (no markdown, no code fences, just raw JSON):
 {
-  "summary": "2-3 sentence case overview focusing on the strategic challenge",
-  "framework": {
-    "type": "Strategic framework name (e.g., 90-Day Plan, Turnaround Strategy, Growth Acceleration, Organizational Transformation, Market Repositioning)",
-    "hypothesis": "Core strategic thesis — what you believe the right direction is and why",
-    "issueTree": [
-      {
-        "branch": "Strategic priority area (e.g., Diagnose & Assess, Quick Wins, Structural Changes, Stakeholder Alignment)",
-        "subBranches": ["Specific initiative or action"],
-        "keyQuestions": ["Key question to investigate or validate"]
-      }
-    ],
-    "quantitativeAnchors": ["Key metric, target, or benchmark to anchor the strategy"]
-  },
-  "approaches": [
+  "sections": [
     {
-      "name": "Strategy name (e.g., Aggressive Turnaround, Measured Transformation, Stakeholder-First Approach)",
-      "angle": "Brief description of the strategic philosophy",
-      "openingStructure": "How to open your presentation — the strategic narrative in the first 2 minutes",
-      "keyAnalyses": ["Key strategic move 1", "Key strategic move 2", "Key strategic move 3"],
-      "recommendation": "The headline recommendation and expected outcomes",
-      "risks": ["Key risk or pushback to anticipate"],
-      "bestWhen": "When this approach is the strongest choice (e.g., risk tolerance, organizational culture, time pressure)"
+      "title": "Section title — the specific area or question from the case (e.g., 'Market Share Recovery Strategy', 'First 90 Days Priorities', 'Stakeholder Communication Plan')",
+      "context": "Brief explanation of why this area matters and what the interviewer is looking for",
+      "veryGoodAnswer": "A thorough, well-structured answer that would earn a strong pass. Include specific actions, reasoning, and where possible reference data from the case. Write as if coaching the candidate on exactly what to say.",
+      "exceptionalAddition": "What separates a very good answer from an outstanding one. Additional depth, a contrarian insight, a second-order effect, a quantitative anchor, or a stakeholder angle most candidates miss. This is the 'wow factor' that makes a hiring panel sit up."
     }
   ],
-  "keyMetrics": ["Important data point, benchmark, or target from the case"],
-  "pitfalls": ["Common strategic mistake to avoid in this specific case"]
+  "executiveTips": ["Practical presentation tip or strategic insight specific to this case"]
 }
 
 IMPORTANT:
-- Generate exactly 3 approaches with distinctly different strategic philosophies (e.g., aggressive vs. measured vs. stakeholder-first)
-- Each approach should be a credible executive strategy — not a textbook framework exercise
-- Focus on WHAT to do and WHY, not generic consulting frameworks
-- Key metrics should reference actual data from the case brief
-- Pitfalls should be specific to this case — things that would make a candidate look junior or naive
+- Do NOT force the case into a fixed number of sections — let the case content drive the structure
+- Each section should map to a distinct area the case asks about
+- If the case has 3 questions, you might have 3-5 sections. If it covers 7 strategic areas, have 7+ sections
+- The "veryGoodAnswer" should be genuinely useful — specific enough to present, not generic strategy-speak
+- The "exceptionalAddition" should be a clear step up — the kind of insight that shows real executive maturity
+- "executiveTips" should be practical advice for presenting this specific case (not generic interview tips)
 - If company/industry context is provided, tailor everything to that specific business reality
 - Think about what would impress a hiring panel of senior executives, not a consulting interviewer`;
 
@@ -281,8 +267,8 @@ async function handleCaseAnalysis(
     }
     sendEvent('summary_done', {});
 
-    // Generate full analysis (framework + 3 approaches)
-    sendEvent('status', { phase: 'analyzing', message: 'Building framework and solution approaches...' });
+    // Generate full analysis (sections + executive tips)
+    sendEvent('status', { phase: 'analyzing', message: 'Building section-by-section analysis...' });
 
     const analysisResponse = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -312,7 +298,7 @@ async function handleCaseAnalysis(
       console.error('Failed to parse case analysis JSON:', parseError);
       console.error('Raw response:', analysisJson.substring(0, 500));
       // Try to salvage what we can
-      analysis = { framework: null, approaches: [], keyMetrics: [], pitfalls: [] };
+      analysis = { sections: [], executiveTips: [] };
     }
 
     // Save complete analysis to DB
@@ -320,10 +306,8 @@ async function handleCaseAnalysis(
       .from('case_analyses') as ReturnType<typeof supabase.from>)
       .update({
         summary,
-        framework: analysis.framework || null,
-        approaches: analysis.approaches || [],
-        key_metrics: analysis.keyMetrics || [],
-        pitfalls: analysis.pitfalls || [],
+        sections: analysis.sections || [],
+        executive_tips: analysis.executiveTips || [],
         status: 'ready',
       } as Record<string, unknown>)
       .eq('id', caseId);
